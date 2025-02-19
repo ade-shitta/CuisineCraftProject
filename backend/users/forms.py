@@ -8,16 +8,22 @@ from django.contrib.auth.forms import (
 from .models import User
 
 class UserRegistrationForm(UserCreationForm):
+    username = forms.CharField(required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Enter a username'
+        })
+    )
     first_name = forms.CharField(required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': 'John Doe'
+            'placeholder': 'First Name'
         })
     )
     last_name = forms.CharField(required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': 'John Doe'
+            'placeholder': 'Last Name'
         })
     )
     email = forms.EmailField(required=True,
@@ -47,13 +53,13 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'email', 'date_of_birth', 'password1', 'password2')
+        fields = ('username','first_name', 'last_name', 'email', 'date_of_birth', 'password1', 'password2')
 
 class UserLoginForm(AuthenticationForm):
-    email = forms.EmailField(required=True,
-        widget=forms.EmailInput(attrs={
+    username = forms.CharField(required=True,
+        widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': 'example@example.com'
+            'placeholder': 'Enter your username'
         })
     )
     password = forms.CharField(
@@ -65,7 +71,7 @@ class UserLoginForm(AuthenticationForm):
     
     class Meta:
         model = User
-        fields = ("email", "password")
+        fields = ("username", "password")
 
 class UserUpdateForm(UserChangeForm):
     password = None

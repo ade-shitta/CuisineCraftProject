@@ -100,3 +100,53 @@ label {
     box-sizing: border-box;
     margin-bottom: 15px;
 }
+
+.home-body {
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+    color: white;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('../images/burger-exploded.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+.home-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.welcome-text {
+    font-size: 4rem;
+    margin-bottom: 0;
+}
+
+.subtitle {
+    font-size: 3.5rem;
+    margin-top: 10px;
+}
+
+.start-cooking-button {
+    display: inline-block;
+    background-color: #ff5757;
+    color: white;
+    text-decoration: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 1.2rem;
+    margin-top: 20px;
+    transition: background-color 0.3s;
+}
+
+.start-cooking-button:hover {
+    background-color: #ff4242;
+}
+
+.arrow {
+    margin-left: 8px;
+}

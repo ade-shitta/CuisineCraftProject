@@ -31,6 +31,8 @@ AUTH_USER_MODEL = 'users.User'
 
 # Application definition
 
+LOGIN_URL = '/login/'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

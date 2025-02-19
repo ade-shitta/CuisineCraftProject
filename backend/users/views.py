@@ -1,30 +1,37 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.http import HttpRequest, HttpResponse
+from django.contrib.auth.decorators import login_required
+from .forms import UserRegistrationForm, UserLoginForm
 
 # Create your views here.
+# @login_required
+def homepage(request: HttpRequest) -> HttpResponse:
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
+    return render(request, 'spa/index.html')
+
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # Log the user right after registration
             login(request, user)
-            return redirect('home') # i need to change this to the actual home page later
+            return redirect('home')
     else:
-        form = UserCreationForm()
-    return render(request, 'users/register.html', {'form': form})
+        form = UserRegistrationForm()
+    return render(request, 'auth/register.html', {'form': form})
 
 def login_view(request):
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        form = UserLoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
             return redirect('home')
     else:
-        form = AuthenticationForm()
-    return render(request, 'users/login.html', {'form': form})
+        form = UserLoginForm()
+    return render(request, 'auth/login.html', {'form': form})
 
 def logout_view(request):
     logout(request)
