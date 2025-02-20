@@ -6,7 +6,7 @@ from .forms import UserRegistrationForm, UserLoginForm
 
 # Create your views here.
 # @login_required
-def homepage(request: HttpRequest) -> HttpResponse:
+def home(request: HttpRequest) -> HttpResponse:
     # if not request.user.is_authenticated:
     #     return redirect('login')
     return render(request, 'spa/index.html')
@@ -33,6 +33,7 @@ def login_view(request):
         form = UserLoginForm()
     return render(request, 'auth/login.html', {'form': form})
 
+@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
