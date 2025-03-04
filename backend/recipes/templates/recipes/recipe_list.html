@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recipes</title>
+    <link rel="stylesheet" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Recipe List</h1>
+    </header>
+    <main>
+        <ul>
+            {% for recipe in recipes %}
+                <li>
+                    <a href="{% url 'recipe_detail' recipe.recipe_id %}">{{ recipe.title }}</a>
+                </li>
+            {% empty %}
+                <li>No recipes available.</li>
+            {% endfor %}
+        </ul>
+    </main>
+</body>
+</html>

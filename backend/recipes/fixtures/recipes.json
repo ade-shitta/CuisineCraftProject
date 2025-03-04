@@ -1,0 +1,20 @@
+[
+  {
+    "model": "recipes.recipe",
+    "pk": 1,
+    "fields": {
+      "title": "Pasta al Pomodoro",
+      "instructions": "Boil pasta until al dente, then stir in tomato sauce and fresh basil. Serve hot.",
+      "dietary_tags": ["vegetarian"]
+    }
+  },
+  {
+    "model": "recipes.recipe",
+    "pk": 2,
+    "fields": {
+      "title": "Grilled Chicken Salad",
+      "instructions": "Season chicken breasts and grill until cooked. Toss with mixed greens, cherry tomatoes, and vinaigrette.",
+      "dietary_tags": ["gluten-free"]
+    }
+  }
+]

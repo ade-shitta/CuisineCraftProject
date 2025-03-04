@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ recipe.title }}</title>
+    <link rel="stylesheet" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    <header>
+        <h1>{{ recipe.title }}</h1>
+    </header>
+    <main>
+        <section>
+            <p>{{ recipe.instructions }}</p>
+            <p>Dietary tags: {{ recipe.dietary_tags|join:", " }}</p>
+        </section>
+        <a href="{% url 'recipe_list' %}">Back to list</a>
+    </main>
+</body>
+</html>
