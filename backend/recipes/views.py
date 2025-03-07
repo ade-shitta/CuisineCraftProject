@@ -1,12 +1,27 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from .models import Recipe, SavedRecipe
 
 # Create your views here.
 
 def recipe_list(request):
-    recipes = Recipe.objects.all()
-    return render(request, 'recipes/recipe_list.html', {'recipes': recipes})
+    # Get all recipes ordered by title
+    all_recipes = Recipe.objects.all().order_by('title')
+    
+    # Set up pagination - 20 recipes per page
+    paginator = Paginator(all_recipes, 20)  # Show 20 recipes per page
+    
+    # Get the page number from the request
+    page_number = request.GET.get('page', 1)
+    
+    # Get the Page object for the requested page
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'recipes/recipe_list.html', {
+        'recipes': page_obj,
+        'page_obj': page_obj,  # Send the page object for pagination controls
+    })
 
 def recipe_detail(request, recipe_id):
     recipe = get_object_or_404(Recipe, pk=recipe_id)

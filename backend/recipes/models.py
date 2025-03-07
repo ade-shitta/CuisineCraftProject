@@ -8,6 +8,7 @@ class Recipe(models.Model):
     title = models.CharField(max_length=200)
     instructions = models.TextField()
     dietary_tags = models.JSONField(default=list, blank=True)
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return self.title
