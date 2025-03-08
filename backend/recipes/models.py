@@ -8,7 +8,7 @@ class Recipe(models.Model):
     title = models.CharField(max_length=200)
     instructions = models.TextField()
     dietary_tags = models.JSONField(default=list, blank=True)
-    description = models.TextField(blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -40,11 +40,14 @@ class RecipeIngredient(models.Model):
         on_delete=models.CASCADE,
         related_name="ingredient_recipes"
     )
+    measurement = models.CharField(max_length=100, blank=True)
     
     class Meta:
         unique_together = (("recipe", "ingredient"),)
     
     def __str__(self):
+        if self.measurement:
+            return f"{self.recipe.title} includes {self.measurement} of {self.ingredient.name}"
         return f"{self.recipe.title} includes {self.ingredient.name}"
 
 

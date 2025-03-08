@@ -51,6 +51,3 @@ celerybeat-schedule
 *.swp
 *.swo
 *.qodo
-
-### CSVs ###
-CSVs
