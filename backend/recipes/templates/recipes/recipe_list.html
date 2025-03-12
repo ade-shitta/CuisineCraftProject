@@ -4,21 +4,57 @@
 <head>
     <title>Recipes</title>
     <link rel="stylesheet" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" href="{% static 'css/recipe_list.css' %}">
 </head>
 <body>
     <header>
-        <h1>Recipe List</h1>
+        <h1>Recipe Collection</h1>
     </header>
     <main>
-        <ul>
+        <ul class="recipe-list">
             {% for recipe in recipes %}
-                <li>
-                    <a href="{% url 'recipe_detail' recipe.recipe_id %}">{{ recipe.title }}</a>
+                <li class="recipe-card">
+                    <a href="{% url 'recipe_detail' recipe.recipe_id %}">
+                        {% if recipe.image_url %}
+                            <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+                        {% else %}
+                            <div class="recipe-image" style="background-color: #eee; display: flex; align-items: center; justify-content: center;">
+                                <span>No image</span>
+                            </div>
+                        {% endif %}
+                        <div class="recipe-title">{{ recipe.title }}</div>
+                    </a>
                 </li>
             {% empty %}
                 <li>No recipes available.</li>
             {% endfor %}
         </ul>
+        
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1" class="page-btn">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="page-btn">Previous</a>
+            {% endif %}
+            
+            {% for page_num in page_obj.paginator.page_range %}
+                {% if page_obj.number == page_num %}
+                    <a class="page-btn current-page">{{ page_num }}</a>
+                {% elif page_num > page_obj.number|add:'-5' and page_num < page_obj.number|add:'5' %}
+                    <a href="?page={{ page_num }}" class="page-btn">{{ page_num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="page-btn">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="page-btn">Last &raquo;</a>
+            {% endif %}
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </div>
+        {% endif %}
     </main>
 </body>
 </html>

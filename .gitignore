@@ -50,4 +50,4 @@ celerybeat-schedule
 .idea/
 *.swp
 *.swo
-*.qodo
+.qodo

@@ -9,8 +9,8 @@ def recipe_list(request):
     # Get all recipes ordered by title
     all_recipes = Recipe.objects.all().order_by('title')
     
-    # Set up pagination - 20 recipes per page
-    paginator = Paginator(all_recipes, 20)  # Show 20 recipes per page
+    # Set up pagination - 12 recipes per page (3 rows of 4 in grid)
+    paginator = Paginator(all_recipes, 12)  # Show 12 recipes per page
     
     # Get the page number from the request
     page_number = request.GET.get('page', 1)

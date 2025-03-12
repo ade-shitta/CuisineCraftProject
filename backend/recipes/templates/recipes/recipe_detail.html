@@ -4,17 +4,49 @@
 <head>
     <title>{{ recipe.title }}</title>
     <link rel="stylesheet" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" href="{% static 'css/recipe_detail.css' %}">
 </head>
 <body>
     <header>
         <h1>{{ recipe.title }}</h1>
     </header>
     <main>
-        <section>
-            <p>{{ recipe.instructions }}</p>
-            <p>Dietary tags: {{ recipe.dietary_tags|join:", " }}</p>
-        </section>
-        <a href="{% url 'recipe_list' %}">Back to list</a>
+        {% if recipe.image_url %}
+            <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+        {% endif %}
+        
+        {% if recipe.dietary_tags %}
+        <div class="recipe-section">
+            <h2>Dietary Tags</h2>
+            {% for tag in recipe.dietary_tags %}
+                <span class="recipe-tags">{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="recipe-section">
+            <h2>Ingredients</h2>
+            <ul>
+                {% for ingredient in recipe.recipe_ingredients.all %}
+                    <li>
+                        {% if ingredient.measurement %}
+                            {{ ingredient.measurement }} of {{ ingredient.ingredient.name }}
+                        {% else %}
+                            {{ ingredient.ingredient.name }}
+                        {% endif %}
+                    </li>
+                {% empty %}
+                    <li>No ingredients listed</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="recipe-section">
+            <h2>Instructions</h2>
+            <p class="instructions">{{ recipe.instructions }}</p>
+        </div>
+        
+        <a href="{% url 'recipe_list' %}" class="back-btn">Back to recipe list</a>
     </main>
 </body>
 </html>
