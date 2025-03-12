@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dietary Preferences</title>
+    <link rel="stylesheet" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" href="{% static 'css/preferences.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Your Dietary Preferences</h1>
+    </header>
+    <div class="container">
+        <form method="post" class="preferences-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <h2>{{ form.dietary_preferences.label }}</h2>
+                <ul class="checkbox-grid">
+                {% for choice_id, choice_label in form.fields.dietary_preferences.choices %}
+                    <li>
+                        <input type="checkbox" 
+                               name="dietary_preferences" 
+                               id="id_dietary_preferences_{{ forloop.counter0 }}" 
+                               value="{{ choice_id }}"
+                               {% if choice_id in form.initial.dietary_preferences %}checked{% endif %}>
+                        <label for="id_dietary_preferences_{{ forloop.counter0 }}">{{ choice_label }}</label>
+                    </li>
+                {% endfor %}
+                </ul>
+            </div>
+            <button type="submit" class="save-button">Save Preferences</button>
+        </form>
+        <div class="links">
+            <a href="{% url 'recipe_list' %}" class="link-button">Back to Recipes</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -3,14 +3,31 @@
 <html>
 <head>
     <title>Recipes</title>
-    <link rel="stylesheet" href="{% static 'css/input.css' %}">
     <link rel="stylesheet" href="{% static 'css/recipe_list.css' %}">
 </head>
 <body>
     <header>
         <h1>Recipe Collection</h1>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+                <a href="{% url 'dietary_preferences' %}" class="nav-link">Dietary Preferences</a>
+                <a href="{% url 'logout' %}" class="nav-link">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link">Login</a>
+            {% endif %}
+        </div>
     </header>
     <main>
+        {% if filtered_by_preferences %}
+            <div class="filter-notice">
+                <p>Showing recipes matching your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></p>
+            </div>
+        {% elif user.is_authenticated and not has_preferences %}
+            <div class="filter-notice">
+                <p>Set your <a href="{% url 'dietary_preferences' %}">dietary preferences</a> to see recipes tailored to your needs.</p>
+            </div>
+        {% endif %}
+
         <ul class="recipe-list">
             {% for recipe in recipes %}
                 <li class="recipe-card">
@@ -26,7 +43,7 @@
                     </a>
                 </li>
             {% empty %}
-                <li>No recipes available.</li>
+                <li class="empty-message">No recipes match your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></li>
             {% endfor %}
         </ul>
         
@@ -51,7 +68,7 @@
                 <a href="?page={{ page_obj.paginator.num_pages }}" class="page-btn">Last &raquo;</a>
             {% endif %}
         </div>
-        <div style="text-align: center; margin-top: 10px;">
+        <div class="page-info">
             Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
         </div>
         {% endif %}

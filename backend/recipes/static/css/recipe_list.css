@@ -1,3 +1,67 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f8f8;
+}
+
+header {
+    padding: 20px;
+    background-color: #ff7b7b;
+    color: white;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-links {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+}
+
+.filter-notice {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 12px 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.filter-notice a {
+    color: #856404;
+    text-decoration: underline;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
 .recipe-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -11,6 +75,7 @@
     border-radius: 8px;
     overflow: hidden;
     transition: transform 0.3s ease;
+    background-color: white;
 }
 
 .recipe-card:hover {
@@ -53,16 +118,8 @@
     border-color: #ff5757;
 }
 
-header {
-    padding: 20px;
+.page-info {
     text-align: center;
-    background-color: #ff7b7b;
-    color: white;
-    margin-bottom: 30px;
-}
-
-main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
+    margin-top: 10px;
+    color: #777;
 }

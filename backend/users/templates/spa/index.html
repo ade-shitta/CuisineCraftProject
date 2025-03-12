@@ -9,10 +9,16 @@
     <div class="home-container">
         <h1 class="welcome-text">Welcome to Cuisine Craft.</h1>
         <h2 class="subtitle">Let's Get Cooking.</h2>
-        {% comment %} <a href="{% url 'recipe_list' %}" class="start-cooking-button"> {% endcomment %}
-        <a href="#" class="start-cooking-button">
-            Start cooking <span class="arrow">→</span>
-        </a>
+        <div class="button-container">
+            <a href="{% url 'recipe_list' %}" class="start-cooking-button">
+                Start cooking <span class="arrow">→</span>
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'dietary_preferences' %}" class="preferences-button">
+                Set dietary preferences <span class="arrow">→</span>
+            </a>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>
