@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Favorite Recipes</title>
+    <link rel="stylesheet" href="{% static 'css/recipe_list.css' %}">
+</head>
+<body>
+    <header>
+        <h1>My Favorite Recipes</h1>
+        <div class="nav-links">
+            <a href="{% url 'recipe_list' %}" class="nav-link">All Recipes</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dietary_preferences' %}" class="nav-link">Dietary Preferences</a>
+                <a href="{% url 'logout' %}" class="nav-link">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link">Login</a>
+            {% endif %}
+        </div>
+    </header>
+    <main>
+        <ul class="recipe-list">
+            {% for recipe in recipes %}
+                <li class="recipe-card">
+                    <a href="{% url 'recipe_detail' recipe.recipe_id %}" class="recipe-link">
+                        {% if recipe.image_url %}
+                            <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+                        {% else %}
+                            <div class="recipe-image" style="background-color: #eee; display: flex; align-items: center; justify-content: center;">
+                                <span>No image</span>
+                            </div>
+                        {% endif %}
+                        <div class="recipe-title">{{ recipe.title }}</div>
+                    </a>
+                    <div class="recipe-card-actions">
+                        <a href="{% url 'toggle_favorite_recipe' recipe.recipe_id %}" 
+                           class="favorite-toggle favorited" 
+                           title="Remove from favorites">★</a>
+                    </div>
+                </li>
+            {% empty %}
+                <li class="empty-message">You haven't favorited any recipes yet.</li>
+            {% endfor %}
+        </ul>
+    </main>
+</body>
+</html>

@@ -15,6 +15,21 @@
             <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
         {% endif %}
         
+        <!-- Add favorite button -->
+        {% if user.is_authenticated %}
+        <div class="recipe-actions">
+            {% if is_favorite %}
+                <a href="{% url 'toggle_favorite_recipe' recipe.recipe_id %}" class="favorite-btn favorited">
+                    ★ Remove from favorites
+                </a>
+            {% else %}
+                <a href="{% url 'toggle_favorite_recipe' recipe.recipe_id %}" class="favorite-btn">
+                    ☆ Add to favorites
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
         {% if recipe.dietary_tags %}
         <div class="recipe-section">
             <h2>Dietary Tags</h2>
@@ -46,7 +61,12 @@
             <p class="instructions">{{ recipe.instructions }}</p>
         </div>
         
-        <a href="{% url 'recipe_list' %}" class="back-btn">Back to recipe list</a>
+        <div class="action-links">
+            <a href="{% url 'recipe_list' %}" class="back-btn">Back to recipe list</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'favorite_recipes' %}" class="back-btn">My favorites</a>
+            {% endif %}
+        </div>
     </main>
 </body>
 </html>
