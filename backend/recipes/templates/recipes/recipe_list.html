@@ -10,6 +10,7 @@
         <h1>Recipe Collection</h1>
         <div class="nav-links">
             {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}" class="nav-link">My Profile</a>
                 <a href="{% url 'favorite_recipes' %}" class="nav-link">My Favorites</a>
                 <a href="{% url 'dietary_preferences' %}" class="nav-link">Dietary Preferences</a>
                 <a href="{% url 'logout' %}" class="nav-link">Logout</a>

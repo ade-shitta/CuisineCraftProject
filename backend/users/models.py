@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 # Create your models here.
 class User(AbstractUser):
     date_of_birth = models.DateField(null=True)
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     
     class Meta:
         db_table = 'users'
