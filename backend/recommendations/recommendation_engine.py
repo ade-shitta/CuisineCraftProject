@@ -1,7 +1,7 @@
 import numpy as np
 from django.db.models import Count, Q
 from recommendations.text_utils import find_similar_recipes
-from recipes.models import Recipe, SavedRecipe
+from recipes.models import Recipe, SavedRecipe, RecipeIngredient
 from recommendations.models import RecipeInteraction, DietaryPreference
 
 def get_user_dietary_preferences(user):
