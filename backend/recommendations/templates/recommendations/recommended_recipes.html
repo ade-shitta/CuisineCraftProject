@@ -2,13 +2,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Recipes</title>
+    <title>Recipes Recommended For You</title>
     <link rel="stylesheet" href="{% static 'css/recipe_list.css' %}">
 </head>
 <body>
     <header>
-        <h1>Recipe Collection</h1>
+        <h1>Recipes Recommended For You</h1>
         <div class="nav-links">
+            <a href="{% url 'recipe_list' %}" class="nav-link">All Recipes</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'profile' %}" class="nav-link">My Profile</a>
                 <a href="{% url 'favorite_recipes' %}" class="nav-link">My Favorites</a>
@@ -17,20 +18,9 @@
             {% else %}
                 <a href="{% url 'login' %}" class="nav-link">Login</a>
             {% endif %}
-            <a href="{% url 'search_recipes' %}" class="nav-link">Search by Ingredients</a>
         </div>
     </header>
     <main>
-        {% if filtered_by_preferences %}
-            <div class="filter-notice">
-                <p>Showing recipes matching your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></p>
-            </div>
-        {% elif user.is_authenticated and not has_preferences %}
-            <div class="filter-notice">
-                <p>Set your <a href="{% url 'dietary_preferences' %}">dietary preferences</a> to see recipes tailored to your needs.</p>
-            </div>
-        {% endif %}
-
         <ul class="recipe-list">
             {% for recipe in recipes %}
                 <li class="recipe-card">
@@ -55,35 +45,9 @@
                     {% endif %}
                 </li>
             {% empty %}
-                <li class="empty-message">No recipes match your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></li>
+                <li class="empty-message">No recommendations available yet. Try exploring and favoriting some recipes!</li>
             {% endfor %}
         </ul>
-        
-        <!-- Pagination -->
-        {% if page_obj.paginator.num_pages > 1 %}
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-                <a href="?page=1" class="page-btn">&laquo; First</a>
-                <a href="?page={{ page_obj.previous_page_number }}" class="page-btn">Previous</a>
-            {% endif %}
-            
-            {% for page_num in page_obj.paginator.page_range %}
-                {% if page_obj.number == page_num %}
-                    <a class="page-btn current-page">{{ page_num }}</a>
-                {% elif page_num > page_obj.number|add:'-5' and page_num < page_obj.number|add:'5' %}
-                    <a href="?page={{ page_num }}" class="page-btn">{{ page_num }}</a>
-                {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="page-btn">Next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}" class="page-btn">Last &raquo;</a>
-            {% endif %}
-        </div>
-        <div class="page-info">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </div>
-        {% endif %}
     </main>
 </body>
 </html>

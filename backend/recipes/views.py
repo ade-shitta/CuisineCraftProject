@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import Recipe, SavedRecipe
-from recommendations.models import DietaryPreference
+from recommendations.models import DietaryPreference, RecipeInteraction
+from recommendations.text_utils import search_by_ingredients
 
 def recipe_list(request):
     """Display a list of recipes, filtered by user's dietary preferences if available."""
@@ -61,6 +62,14 @@ def recipe_list(request):
 def recipe_detail(request, recipe_id):
     recipe = get_object_or_404(Recipe, pk=recipe_id)
     
+    # Record view interaction
+    if request.user.is_authenticated:
+        RecipeInteraction.objects.create(
+            user=request.user,
+            recipe=recipe,
+            interaction_type='view'
+        )
+    
     # Check if the recipe is favorited by current user
     is_favorite = False
     if request.user.is_authenticated:
@@ -87,9 +96,18 @@ def toggle_favorite_recipe(request, recipe_id):
     if saved_recipe:
         # If already favorited, remove it
         saved_recipe.delete()
+        interaction_type = 'unfavorite'
     else:
         # If not favorited, add it
         SavedRecipe.objects.create(user=request.user, recipe=recipe)
+        interaction_type = 'favorite'
+        
+        # Record favorite interaction
+        RecipeInteraction.objects.create(
+            user=request.user,
+            recipe=recipe,
+            interaction_type='favorite'
+        )
     
     # Redirect back to the page they were on or to the recipe detail page
     referer = request.META.get('HTTP_REFERER')
@@ -108,4 +126,61 @@ def favorite_recipes(request):
     return render(request, 'recipes/favorite_recipes.html', {
         'recipes': recipes,
         'is_favorites_page': True
+    })
+
+def search_recipes(request):
+    """Search for recipes by ingredient, respecting dietary preferences"""
+    query = request.GET.get('ingredients', '')
+    
+    if query:
+        # Pass the current user to apply dietary preferences
+        recipes = search_by_ingredients(query, user=request.user)
+    else:
+        # Don't apply slice yet - get all recipes first
+        recipes = Recipe.objects.all()
+        
+        # Apply dietary filtering for default results if user is logged in
+        if request.user.is_authenticated:
+            from recommendations.models import DietaryPreference
+            preferences = list(DietaryPreference.objects.filter(
+                user=request.user
+            ).values_list('restriction_type', flat=True))
+            
+            if preferences:
+                # Use a different approach to filter by preferences
+                # Create a list to store recipes that match all preferences
+                matching_recipe_ids = []
+                
+                for recipe in recipes:
+                    if all(pref in recipe.dietary_tags for pref in preferences):
+                        matching_recipe_ids.append(recipe.recipe_id)
+                
+                # Then filter the original queryset
+                recipes = Recipe.objects.filter(recipe_id__in=matching_recipe_ids)
+        
+        # Apply limit AFTER all filtering
+        recipes = recipes[:12]
+    
+    # Get user's favorite recipe IDs for UI if logged in
+    favorite_recipe_ids = set()
+    if request.user.is_authenticated:
+        favorite_recipe_ids = set(SavedRecipe.objects.filter(
+            user=request.user
+        ).values_list('recipe__recipe_id', flat=True))
+    
+    # Check if we're filtering by preferences
+    has_preferences = False
+    filtered_by_preferences = False
+    if request.user.is_authenticated:
+        from recommendations.models import DietaryPreference
+        preferences = DietaryPreference.objects.filter(user=request.user)
+        has_preferences = preferences.exists()
+        filtered_by_preferences = has_preferences
+    
+    return render(request, 'recipes/search_results.html', {
+        'recipes': recipes,
+        'query': query,
+        'favorite_recipe_ids': favorite_recipe_ids,
+        'has_preferences': has_preferences,
+        'filtered_by_preferences': filtered_by_preferences
     })
