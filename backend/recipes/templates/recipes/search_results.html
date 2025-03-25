@@ -2,27 +2,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Recipes</title>
+    <title>Recipe Search Results</title>
     <link rel="stylesheet" href="{% static 'css/recipe_list.css' %}">
+    <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
 </head>
 <body>
     <header>
-        <h1>Recipe Collection</h1>
+        <h1>Recipe Search</h1>
         <div class="nav-links">
+            <a href="{% url 'recipe_list' %}" class="nav-link">All Recipes</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'profile' %}" class="nav-link">My Profile</a>
                 <a href="{% url 'favorite_recipes' %}" class="nav-link">My Favorites</a>
                 <a href="{% url 'recommended_recipes' %}" class="nav-link">Recommendations</a>
                 <a href="{% url 'dietary_preferences' %}" class="nav-link">Dietary Preferences</a>
-                <a href="{% url 'search_recipes' %}" class="nav-link">Search by Ingredients</a>
                 <a href="{% url 'logout' %}" class="nav-link">Logout</a>
             {% else %}
-                <a href="{% url 'search_recipes' %}" class="nav-link">Search by Ingredients</a>
                 <a href="{% url 'login' %}" class="nav-link">Login</a>
             {% endif %}
         </div>
     </header>
     <main>
+        <form method="get" action="{% url 'search_recipes' %}" class="search-form">
+            <input type="text" name="ingredients" placeholder="Enter ingredients (comma separated)" 
+                   value="{{ query }}" class="search-input">
+            <button type="submit" class="search-button">Search</button>
+        </form>
+        <div class="search-tips">
+            Tip: Enter multiple ingredients separated by commas (e.g., "chicken, rice, garlic")
+        </div>
+        
         {% if filtered_by_preferences %}
             <div class="filter-notice">
                 <p>Showing recipes matching your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></p>
@@ -32,7 +41,11 @@
                 <p>Set your <a href="{% url 'dietary_preferences' %}">dietary preferences</a> to see recipes tailored to your needs.</p>
             </div>
         {% endif %}
-
+        
+        {% if query %}
+            <h2>Results for: {{ query }}</h2>
+        {% endif %}
+        
         <ul class="recipe-list">
             {% for recipe in recipes %}
                 <li class="recipe-card">
@@ -57,35 +70,9 @@
                     {% endif %}
                 </li>
             {% empty %}
-                <li class="empty-message">No recipes match your dietary preferences. <a href="{% url 'dietary_preferences' %}">Change preferences</a></li>
+                <li class="empty-message">No recipes found with these ingredients. Try different ingredients or fewer ingredients.</li>
             {% endfor %}
         </ul>
-        
-        <!-- Pagination -->
-        {% if page_obj.paginator.num_pages > 1 %}
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-                <a href="?page=1" class="page-btn">&laquo; First</a>
-                <a href="?page={{ page_obj.previous_page_number }}" class="page-btn">Previous</a>
-            {% endif %}
-            
-            {% for page_num in page_obj.paginator.page_range %}
-                {% if page_obj.number == page_num %}
-                    <a class="page-btn current-page">{{ page_num }}</a>
-                {% elif page_num > page_obj.number|add:'-5' and page_num < page_obj.number|add:'5' %}
-                    <a href="?page={{ page_num }}" class="page-btn">{{ page_num }}</a>
-                {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="page-btn">Next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}" class="page-btn">Last &raquo;</a>
-            {% endif %}
-        </div>
-        <div class="page-info">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </div>
-        {% endif %}
     </main>
 </body>
 </html>
