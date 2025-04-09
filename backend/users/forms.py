@@ -32,11 +32,14 @@ class UserRegistrationForm(UserCreationForm):
             'placeholder': 'example@example.com'
         })
     )
-    date_of_birth = forms.DateField(required=True,
+    date_of_birth = forms.DateField(
+        required=True,
         widget=forms.DateInput(attrs={
             'class': 'form-input',
-            'placeholder': 'DD/MM/YYY'
-        })
+            'placeholder': 'DD/MM/YYYY',
+            'type': 'date'  # Use HTML5 date input
+        }),
+        input_formats=['%d/%m/%Y', '%Y-%m-%d']  # Support multiple formats
     )
     password1 = forms.CharField(
         widget=forms.PasswordInput(attrs={

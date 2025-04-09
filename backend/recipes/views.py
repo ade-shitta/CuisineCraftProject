@@ -2,9 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Recipe, SavedRecipe
+from .models import Recipe, SavedRecipe, RecipeIngredient
 from recommendations.models import DietaryPreference, RecipeInteraction
 from recommendations.text_utils import search_by_ingredients
+from rest_framework import serializers
 
 def recipe_list(request):
     """Display a list of recipes, filtered by user's dietary preferences if available."""
@@ -184,3 +185,41 @@ def search_recipes(request):
         'has_preferences': has_preferences,
         'filtered_by_preferences': filtered_by_preferences
     })
+
+class IngredientSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    amount = serializers.CharField()
+
+class RecipeDetailSerializer(serializers.ModelSerializer):
+    ingredients = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Recipe
+        fields = ['recipe_id', 'title', 'instructions', 'dietary_tags', 'image_url', 'ingredients']
+    
+    def get_ingredients(self, obj):
+        ingredients = []
+        for ri in obj.recipe_ingredients.all():
+            ingredients.append({
+                'name': ri.ingredient.name,
+                'amount': ri.measurement
+            })
+        return ingredients
+
+@login_required
+def mark_recipe_cooked(request, recipe_id):
+    """Mark a recipe as cooked by the user"""
+    recipe = get_object_or_404(Recipe, pk=recipe_id)
+    
+    # Record cook interaction
+    RecipeInteraction.objects.create(
+        user=request.user,
+        recipe=recipe,
+        interaction_type='cook'
+    )
+    
+    # Redirect back to referrer
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('recipe_detail', recipe_id=recipe_id)

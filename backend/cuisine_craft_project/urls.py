@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('users.urls')),
     path('recipes/', include('recipes.urls')),
     path('recommendations/', include('recommendations.urls')),
+    path('ingredients/', include('ingredients.urls')),
 ]
 
 if settings.DEBUG:
