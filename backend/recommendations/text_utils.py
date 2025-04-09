@@ -98,8 +98,28 @@ def search_by_ingredients(ingredient_query, limit=20, user=None):
             ])
             
             # Check if all search ingredients are in this recipe
-            if all(any(ingredient in ingredient_name for ingredient_name in recipe_ingredients) 
-                  for ingredient in ingredients):
+            # Using a more flexible matching logic that handles singular/plural forms
+            ingredient_match = True
+            for ingredient in ingredients:
+                # Check for exact match first
+                exact_match = any(ingredient in ingredient_name for ingredient_name in recipe_ingredients)
+                
+                # If no exact match, try checking for singular/plural forms
+                if not exact_match:
+                    # Check for singular form (remove trailing 's' if present)
+                    singular_form = ingredient[:-1] if ingredient.endswith('s') else ingredient
+                    singular_match = any(singular_form in ingredient_name for ingredient_name in recipe_ingredients)
+                    
+                    # Check for plural form (add 's' if not present)
+                    plural_form = ingredient if ingredient.endswith('s') else ingredient + 's'
+                    plural_match = any(plural_form in ingredient_name for ingredient_name in recipe_ingredients)
+                    
+                    # Consider a match if either singular or plural form matches
+                    if not (singular_match or plural_match):
+                        ingredient_match = False
+                        break
+                
+            if ingredient_match:
                 matching_recipe_ids.append(recipe.recipe_id)
         
         # Get recipes with the matching IDs

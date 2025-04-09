@@ -110,6 +110,17 @@ export const recipes = {
     cacheService.set(cacheKey, response.data);
     return response;
   },
+  
+  searchByIngredients: async (ingredients: string) => {
+    const cacheKey = `recipes:ingredients:${ingredients}`;
+    const cached = cacheService.get(cacheKey);
+    
+    if (cached) return { data: cached };
+    
+    const response = await api.get(`/recipes/api/search/?ingredients=${encodeURIComponent(ingredients)}`);
+    cacheService.set(cacheKey, response.data);
+    return response;
+  },
 };
 
 // Ingredients API

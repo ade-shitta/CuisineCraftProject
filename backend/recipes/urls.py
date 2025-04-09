@@ -18,4 +18,5 @@ urlpatterns = [
     path('api/favorites/', api.FavoriteRecipesView.as_view(), name='api-favorite-recipes'),
     path('api/<int:recipe_id>/toggle-favorite/', api.ToggleFavoriteView.as_view(), name='toggle_favorite'),
     path('api/<int:recipe_id>/cook/', api.MarkRecipeCookedView.as_view(), name='api-mark-recipe-cooked'),
+    path('api/search/', api.RecipeSearchView.as_view(), name='api-recipe-search'),
 ]

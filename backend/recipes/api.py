@@ -8,6 +8,7 @@ from django.db.models import Q
 from recommendations.models import RecipeInteraction, DietaryPreference
 from rest_framework import serializers
 from recommendations.recommendation_engine import filter_by_dietary_preferences
+from recommendations.text_utils import search_by_ingredients
 
 class RecipeSerializer(serializers.ModelSerializer):
     isFavorite = serializers.SerializerMethodField()
@@ -112,8 +113,12 @@ class RecipeSearchView(APIView):
     
     def get(self, request):
         query = request.GET.get('query', '')
+        ingredients = request.GET.get('ingredients', '')
         
-        if query:
+        if ingredients:
+            # Use the search_by_ingredients function from text_utils
+            recipes = search_by_ingredients(ingredients, user=request.user)
+        elif query:
             recipes = Recipe.objects.filter(
                 Q(title__icontains=query) |
                 Q(instructions__icontains=query) |
@@ -122,17 +127,19 @@ class RecipeSearchView(APIView):
         else:
             recipes = Recipe.objects.all()  # Don't limit here, wait until after filtering
         
-        # Filter by user's dietary preferences
-        preferences = list(DietaryPreference.objects.filter(
-            user=request.user
-        ).values_list('restriction_type', flat=True))
-        
-        # Filter recipes by preferences if the user has any
-        if preferences:
-            recipes = filter_by_dietary_preferences(recipes, preferences)
+        # Filter by user's dietary preferences if we're not using search_by_ingredients
+        # (since that function already handles dietary preferences)
+        if not ingredients:
+            preferences = list(DietaryPreference.objects.filter(
+                user=request.user
+            ).values_list('restriction_type', flat=True))
+            
+            # Filter recipes by preferences if the user has any
+            if preferences:
+                recipes = filter_by_dietary_preferences(recipes, preferences)
         
         # Limit results after filtering
-        if not query:
+        if not query and not ingredients:
             recipes = recipes[:10]
             
         serializer = RecipeSerializer(recipes, many=True, context={'request': request})

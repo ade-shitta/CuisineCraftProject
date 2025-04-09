@@ -1,162 +1,169 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import Header from "../components/Header"
-import { ingredients as ingredientsApi } from "../services/api"
+import { recipes as recipesApi } from "../services/api"
+import LoadingSpinner from "../components/LoadingSpinner"
+import { ApiRecipe } from "../types/api"
 
-type Ingredient = {
+interface RecipeResult {
   id: string;
-  name: string;
-  category: string;
-  image_url?: string;
-  isTracked: boolean;
+  title: string;
+  image?: string;
+  isFavorite: boolean;
 }
 
 const IngredientRecommendationPage = () => {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [userIngredients, setUserIngredients] = useState<Ingredient[]>([])
-  const [loading, setLoading] = useState(true)
+  const modalRef = useRef<HTMLDivElement>(null)
+  
+  // State variables
+  const [ingredientsInput, setIngredientsInput] = useState("")
+  const [recipeResults, setRecipeResults] = useState<RecipeResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
+  // Redirect if not authenticated
   useEffect(() => {
-    // Only redirect if we're done loading and not authenticated
     if (!isLoading && !isAuthenticated) {
       navigate("/login")
-      return
     }
-
-    const fetchData = async () => {
-      try {
-        // Fetch all ingredients and user's tracked ingredients
-        const [allIngredientsRes, userIngredientsRes] = await Promise.all([
-          ingredientsApi.getAll(),
-          ingredientsApi.getUserIngredients()
-        ])
-        
-        setIngredients(allIngredientsRes.data)
-        setUserIngredients(userIngredientsRes.data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching ingredients:", error)
-        setLoading(false)
-      }
-    }
-
-    fetchData()
   }, [isAuthenticated, navigate, isLoading])
 
-  const handleToggleTracking = async (ingredient: Ingredient) => {
-    try {
-      if (ingredient.isTracked) {
-        await ingredientsApi.untrackIngredient(ingredient.id)
-      } else {
-        await ingredientsApi.trackIngredient(ingredient.id)
+  // Handle click outside modal to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setShowModal(false)
       }
-
-      // Update local state
-      setIngredients(ingredients.map(ing => 
-        ing.id === ingredient.id 
-          ? { ...ing, isTracked: !ing.isTracked } 
-          : ing
-      ))
-
-      // Update user ingredients list
-      if (ingredient.isTracked) {
-        setUserIngredients(userIngredients.filter(ing => ing.id !== ingredient.id))
-      } else {
-        setUserIngredients([...userIngredients, { ...ingredient, isTracked: true }])
-      }
-    } catch (error) {
-      console.error("Error toggling ingredient tracking:", error)
     }
-  }
 
-  if (isLoading) {
+    if (showModal) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showModal])
+
+  // Handle ingredient search submission
+  const handleSearchSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!ingredientsInput.trim()) return
+    
+    setLoading(true)
+    
+    try {
+      const response = await recipesApi.searchByIngredients(ingredientsInput.trim())
+      
+      const recipes = response.data.map((recipe: ApiRecipe) => ({
+        id: recipe.recipe_id,
+        title: recipe.title,
+        image: recipe.image_url,
+        isFavorite: recipe.isFavorite
+      }))
+      
+      setRecipeResults(recipes)
+      setShowModal(true)
+    } catch (error) {
+      console.error("Error searching recipes by ingredients:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [ingredientsInput])
+
+  // Handle recipe selection
+  const handleRecipeClick = useCallback((recipeId: string) => {
+    navigate(`/recipe/${recipeId}`)
+  }, [navigate])
+
+  // Render the modal with recipe results
+  const renderRecipeModal = () => {
     return (
-      <div className="min-h-screen bg-red-400 flex items-center justify-center">
-        <div className="loading loading-spinner loading-lg text-white"></div>
+      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+        <div ref={modalRef} className="bg-white rounded-3xl w-full max-w-xl px-6 py-8 shadow-xl">
+          <h2 className="text-xl font-medium text-center mb-8 text-gray-500">Possible Recipes With Your Current Ingredients</h2>
+          
+          {recipeResults.length === 0 ? (
+            <p className="text-center py-6 text-gray-400">No recipes found with these ingredients.</p>
+          ) : (
+            <div className="space-y-4 max-h-[450px] overflow-y-auto px-4">
+              {recipeResults.map(recipe => (
+                <div 
+                  key={recipe.id}
+                  onClick={() => handleRecipeClick(recipe.id)}
+                  className="bg-red-500 text-white rounded-2xl py-4 px-5 flex justify-between items-center cursor-pointer hover:bg-red-600 transition-colors shadow-md"
+                >
+                  <span className="text-base font-medium">{recipe.title}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => setShowModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-2 rounded-full transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
-  if (loading) {
-    return <div className="min-h-screen bg-red-400 p-4 flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-white"></span>
-    </div>
+  if (isLoading) {
+    return <LoadingSpinner />
   }
 
   return (
-    <div className="min-h-screen bg-red-400 p-4">
-      <div className="flex justify-between items-center mb-8 px-1">
-        <div className="flex-1"></div>
-        <div className="text-center flex-1">
-          <h1 className="text-white text-2xl font-bold">Ingredients</h1>
-        </div>
-        <div className="flex-1 flex justify-end pt-1">
-          <Header />
-        </div>
+    <div className="min-h-screen bg-red-400 flex flex-col">
+      <div className="absolute top-4 right-4">
+        <Header />
       </div>
-
-      <div className="mb-6">
-        <h1 className="text-white text-xl font-bold mb-4">Your Ingredients</h1>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {userIngredients.length > 0 ? (
-            userIngredients.map(ingredient => (
-              <div key={ingredient.id} className="bg-red-300 rounded-lg p-4 flex flex-col items-center">
-                {ingredient.image_url && (
-                  <img 
-                    src={ingredient.image_url} 
-                    alt={ingredient.name} 
-                    className="w-16 h-16 object-cover rounded-full mb-2"
-                  />
-                )}
-                <p className="text-white text-center mb-2">{ingredient.name}</p>
-                <button
-                  onClick={() => handleToggleTracking(ingredient)}
-                  className="btn btn-xs bg-red-500 hover:bg-red-600 text-white border-none"
-                >
-                  Remove
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full text-center text-white">
-              You haven't added any ingredients yet.
+      
+      <div className="flex-grow flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-3xl w-full max-w-xl p-6 shadow-lg">
+          <h2 className="text-xl font-medium text-center mb-6 text-gray-500">Possible Recipes With Your Current Ingredients</h2>
+          
+          <form onSubmit={handleSearchSubmit} className="space-y-4">
+            <div className="bg-red-200 bg-opacity-50 rounded-full p-4">
+              <input
+                type="text"
+                value={ingredientsInput}
+                onChange={(e) => setIngredientsInput(e.target.value)}
+                placeholder="Add Your Ingredients Here"
+                className="w-full bg-transparent text-center text-red-600 placeholder-red-400 focus:outline-none text-lg"
+              />
             </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h1 className="text-white text-xl font-bold mb-4">All Ingredients</h1>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {ingredients.map(ingredient => (
-            <div key={ingredient.id} className="bg-red-300 rounded-lg p-4 flex flex-col items-center">
-              {ingredient.image_url && (
-                <img 
-                  src={ingredient.image_url} 
-                  alt={ingredient.name} 
-                  className="w-16 h-16 object-cover rounded-full mb-2"
-                />
-              )}
-              <p className="text-white text-center mb-2">{ingredient.name}</p>
+            
+            <div className="flex justify-center mt-4">
               <button
-                onClick={() => handleToggleTracking(ingredient)}
-                className={`btn btn-xs ${
-                  ingredient.isTracked 
-                  ? "bg-red-500 hover:bg-red-600" 
-                  : "bg-green-500 hover:bg-green-600"
-                } text-white border-none`}
+                type="submit"
+                disabled={loading}
+                className="bg-red-500 text-white hover:bg-red-600 px-6 py-2 rounded-full shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 w-auto max-w-xs mx-auto"
               >
-                {ingredient.isTracked ? "Remove" : "Add"}
+                {loading ? 'Searching...' : 'Search Recipes'}
               </button>
             </div>
-          ))}
+          </form>
+          
+          <div className="mt-4 text-gray-500 text-center text-sm">
+            Enter ingredients separated by commas (e.g., "chicken, rice, garlic")
+          </div>
         </div>
       </div>
+      
+      {showModal && renderRecipeModal()}
     </div>
   )
 }
