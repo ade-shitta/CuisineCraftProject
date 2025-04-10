@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext"
 import { ApiRecipe } from "../types/api"
 import React from 'react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import RecipeInstructions from "../components/RecipeInstructions"
 
 // Type definitions
 type Ingredient = {
@@ -62,10 +63,9 @@ interface InstructionModalProps {
 const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, onClose, instructions }) => {
   if (!isOpen) return null;
   
-  // Clean up instructions before display
-  const cleanedInstructions = instructions.filter(instruction => 
-    instruction && instruction.trim() && !/^\d+$/.test(instruction.trim())
-  );
+  const handleCookCompleted = () => {
+    // Optional: Record that the user cooked this recipe
+  };
   
   return (
     <div 
@@ -77,7 +77,7 @@ const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Instructions</h2>
+          <h2 className="text-xl font-bold text-gray-800">Recipe Instructions</h2>
           <button 
             onClick={onClose} 
             className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
@@ -91,13 +91,10 @@ const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, 
         </div>
         
         <div className="p-4">
-          <ol className="space-y-4 list-decimal list-inside">
-            {cleanedInstructions.map((instruction, index) => (
-              <li key={index} className="text-gray-800 leading-relaxed">
-                <span className="ml-2">{instruction}</span>
-              </li>
-            ))}
-          </ol>
+          <RecipeInstructions 
+            rawInstructions={instructions} 
+            onComplete={handleCookCompleted} 
+          />
         </div>
         
         <div className="border-t p-4 flex justify-end">
