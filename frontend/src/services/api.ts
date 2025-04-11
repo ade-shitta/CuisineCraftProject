@@ -121,6 +121,17 @@ export const recipes = {
     cacheService.set(cacheKey, response.data);
     return response;
   },
+  
+  markRecipeCooked: async (recipeId: string) => {
+    console.log(`Calling API with URL: /recipes/api/${recipeId}/cook/`);
+    try {
+      const response = await api.post(`/recipes/api/${recipeId}/cook/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Full API request URL: ${api.defaults.baseURL}/recipes/api/${recipeId}/cook/`);
+      throw error;
+    }
+  },
 };
 
 // Ingredients API

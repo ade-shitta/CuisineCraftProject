@@ -5,7 +5,6 @@ import { useParams, useNavigate, useLocation } from "react-router-dom"
 import Header from "../components/Header"
 import { recipes } from "../services/api"
 import { useAuth } from "../context/AuthContext"
-import { ApiRecipe } from "../types/api"
 import React from 'react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import RecipeInstructions from "../components/RecipeInstructions"
@@ -58,13 +57,39 @@ interface InstructionModalProps {
   isOpen: boolean;
   onClose: () => void;
   instructions: string[];
+  recipeId: string;
 }
 
-const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, onClose, instructions }) => {
+const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, onClose, instructions, recipeId }) => {
+  const [completionStatus, setCompletionStatus] = useState({
+    isCompleted: false,
+    isSubmitting: false,
+    error: null as string | null
+  });
+  
   if (!isOpen) return null;
   
-  const handleCookCompleted = () => {
-    // Optional: Record that the user cooked this recipe
+  const handleCookCompleted = async (recipeId: string) => {
+    try {
+      setCompletionStatus(prev => ({ ...prev, isSubmitting: true }));
+      
+      // Pass recipeId as string directly
+      await recipes.markRecipeCooked(recipeId);
+      
+      setCompletionStatus({
+        isCompleted: true,
+        isSubmitting: false,
+        error: null
+      });
+      
+    } catch (error) {
+      console.error("Failed to record recipe completion:", error);
+      setCompletionStatus({
+        isCompleted: false,
+        isSubmitting: false,
+        error: "Failed to record your cooking achievement. Please try again."
+      });
+    }
   };
   
   return (
@@ -92,9 +117,16 @@ const InstructionModal: React.FC<InstructionModalProps> = React.memo(({ isOpen, 
         
         <div className="p-4">
           <RecipeInstructions 
-            rawInstructions={instructions} 
+            rawInstructions={instructions}
+            recipeId={recipeId}
             onComplete={handleCookCompleted} 
           />
+          
+          {completionStatus.error && (
+            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+              {completionStatus.error}
+            </div>
+          )}
         </div>
         
         <div className="border-t p-4 flex justify-end">
@@ -121,7 +153,6 @@ const RecipeDetailsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fetch recipe data with optimized code
   useEffect(() => {
     if (!id || !isAuthenticated) return;
 
@@ -130,7 +161,6 @@ const RecipeDetailsPage: React.FC = () => {
       try {
         const response = await recipes.getById(id);
         
-        // Process data once
         const instructions = response.data.instructions.split('\n').filter(Boolean);
         const ingredients = Array.isArray(response.data.ingredients) 
           ? response.data.ingredients 
@@ -153,34 +183,27 @@ const RecipeDetailsPage: React.FC = () => {
     fetchRecipe();
   }, [id, isAuthenticated, location.key]);
 
-  // Handle user authentication
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate("/login");
     }
   }, [authLoading, isAuthenticated, navigate]);
 
-  // Memoize callbacks
   const handleModalOpen = useCallback(() => setShowModal(true), []);
   const handleModalClose = useCallback(() => setShowModal(false), []);
   const handleBackClick = useCallback(() => {
-    // Check if we have at least one entry in the history stack
     if (window.history.length > 1) {
-      // Go back to the previous page in history
       navigate(-1);
     } else {
-      // Fallback to home if somehow there's no history
       navigate('/home');
     }
   }, [navigate]);
 
-  // Toggle favorite status
   const handleToggleFavorite = useCallback(async () => {
     if (!recipe) return;
     
     try {
       await recipes.toggleFavorite(recipe.recipe_id);
-      // Update local state
       setRecipe(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -201,7 +224,6 @@ const RecipeDetailsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-red-400 p-4">
-      {/* Top header layout with back button on the left, title in center, and burger menu on right */}
       <div className="flex justify-between items-center mb-8 px-1">
         <div className="flex-1">
           <button 
@@ -223,7 +245,6 @@ const RecipeDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Recipe Image with Favorite Button */}
       <div className="flex justify-center mb-8 px-6 relative">
         {recipe.image_url && (
           <div className="relative inline-block">
@@ -256,7 +277,6 @@ const RecipeDetailsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Ingredients Section */}
       <div className="px-6 pb-16">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-xl font-bold text-black">Ingredients</h2>
@@ -293,12 +313,14 @@ const RecipeDetailsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Keep the instruction modal for functionality */}
-      <InstructionModal 
-        isOpen={showModal}
-        onClose={handleModalClose}
-        instructions={recipe.instructions}
-      />
+      {showModal && (
+        <InstructionModal 
+          isOpen={showModal}
+          onClose={handleModalClose}
+          instructions={recipe?.instructions || []}
+          recipeId={recipe?.recipe_id || ''}
+        />
+      )}
     </div>
   );
 };

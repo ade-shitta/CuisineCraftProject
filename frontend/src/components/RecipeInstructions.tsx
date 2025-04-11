@@ -7,11 +7,13 @@ interface InstructionStep {
 
 interface RecipeInstructionsProps {
   rawInstructions: string[];
-  onComplete?: () => void;
+  recipeId: string; // Add recipeId prop
+  onComplete?: (recipeId: string) => void; // Update to pass recipeId
 }
 
 const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({ 
   rawInstructions,
+  recipeId,
   onComplete
 }) => {
   // Process instructions into clean steps
@@ -24,6 +26,7 @@ const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
   
   const [steps, setSteps] = useState<InstructionStep[]>(processedSteps);
   const [cookingMode, setCookingMode] = useState(false);
+  const [completionRecorded, setCompletionRecorded] = useState(false);
   
   // Track progress
   const progress = steps.filter(step => step.completed).length / steps.length;
@@ -35,8 +38,13 @@ const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
     newSteps[index].completed = !newSteps[index].completed;
     setSteps(newSteps);
     
-    if (newSteps.every(step => step.completed) && onComplete) {
-      onComplete();
+    // Check if all steps are now completed
+    const nowAllCompleted = newSteps.every(step => step.completed);
+    
+    // If all steps are completed and completion hasn't been recorded yet
+    if (nowAllCompleted && !completionRecorded && onComplete) {
+      onComplete(recipeId);
+      setCompletionRecorded(true);
     }
   };
 
@@ -91,15 +99,10 @@ const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
                     style={{ minWidth: '1.25rem' }} 
                   >
                     {step.completed && (
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        viewBox="0 0 20 20" 
-                        fill="currentColor" 
-                        className="w-5 h-5 text-red-500 absolute top-0 left-0"
-                      >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path 
                           fillRule="evenodd" 
-                          d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" 
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
                           clipRule="evenodd" 
                         />
                       </svg>
