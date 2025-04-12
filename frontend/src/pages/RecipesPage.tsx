@@ -171,7 +171,11 @@ const RecipesPage: React.FC = () => {
   }, []);
 
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-red-400 flex flex-col items-center justify-center">
+        <div className="loading loading-bars loading-lg text-white"></div>
+      </div>
+    );
   }
 
   return (
@@ -335,4 +339,4 @@ const RecipesPage: React.FC = () => {
   );
 };
 
-export default React.memo(RecipesPage); 
+export default React.memo(RecipesPage);

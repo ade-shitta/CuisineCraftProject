@@ -152,12 +152,17 @@ const RecipeDetailsPage: React.FC = () => {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
 
   useEffect(() => {
     if (!id || !isAuthenticated) return;
 
+    setLoading(true);
+    const loaderTimer = setTimeout(() => {
+      if (loading) setShowLoader(true);
+    }, 300);
+
     const fetchRecipe = async () => {
-      setLoading(true);
       try {
         const response = await recipes.getById(id);
         
@@ -177,10 +182,13 @@ const RecipeDetailsPage: React.FC = () => {
         console.error("Error fetching recipe:", err);
         setError("Failed to load recipe");
         setLoading(false);
+      } finally {
+        setShowLoader(false);
       }
     };
 
     fetchRecipe();
+    return () => clearTimeout(loaderTimer);
   }, [id, isAuthenticated, location.key]);
 
   useEffect(() => {
@@ -210,7 +218,7 @@ const RecipeDetailsPage: React.FC = () => {
     }
   }, [recipe]);
 
-  if (authLoading || loading) {
+  if ((authLoading || loading) && showLoader) {
     return <LoadingSpinner />;
   }
 
