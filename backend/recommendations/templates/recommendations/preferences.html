@@ -15,24 +15,24 @@
             {% csrf_token %}
             <div class="form-group">
                 <h2>{{ form.dietary_preferences.label }}</h2>
-                <ul class="checkbox-grid">
+                <ul class="dietary-options-grid">
                 {% for choice_id, choice_label in form.fields.dietary_preferences.choices %}
-                    <li>
+                    <li class="dietary-option">
                         <input type="checkbox" 
                                name="dietary_preferences" 
                                id="id_dietary_preferences_{{ forloop.counter0 }}" 
                                value="{{ choice_id }}"
                                {% if choice_id in form.initial.dietary_preferences %}checked{% endif %}>
-                        <label for="id_dietary_preferences_{{ forloop.counter0 }}">{{ choice_label }}</label>
+                        <label for="id_dietary_preferences_{{ forloop.counter0 }}" class="dietary-option-label">
+                            <img src="{% static 'images/dietary/'|add:choice_id|add:'.png' %}" alt="{{ choice_label }}" class="dietary-option-image">
+                            <span>{{ choice_label }}</span>
+                        </label>
                     </li>
                 {% endfor %}
                 </ul>
             </div>
             <button type="submit" class="save-button">Save Preferences</button>
         </form>
-        <div class="links">
-            <a href="{% url 'recipe_list' %}" class="link-button">Back to Recipes</a>
-        </div>
     </div>
 </body>
 </html>

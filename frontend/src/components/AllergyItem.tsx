@@ -8,9 +8,17 @@ interface AllergyItemProps {
   isSelected: boolean
   onToggle: (name: string) => void
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void
+  textColor?: string // Add optional textColor prop
 }
 
-const AllergyItem = ({ name, image, isSelected, onToggle, onError }: AllergyItemProps) => {
+const AllergyItem = ({ 
+  name, 
+  image, 
+  isSelected, 
+  onToggle, 
+  onError,
+  textColor = "text-gray-800" // Default value if not provided
+}: AllergyItemProps) => {
   return (
     <div
       className={`flex flex-col items-center cursor-pointer ${isSelected ? "opacity-50" : ""}`}
@@ -37,7 +45,7 @@ const AllergyItem = ({ name, image, isSelected, onToggle, onError }: AllergyItem
           </div>
         )}
       </div>
-      <span className="text-xs text-center">{name}</span>
+      <span className={`text-xs text-center ${textColor}`}>{name}</span>
     </div>
   )
 }

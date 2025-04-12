@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import Header from "../components/Header"
 import { recommendations } from "../services/api"
+import AllergyItem from "../components/AllergyItem"
 
 interface DietaryPreference {
   id: string;
@@ -20,14 +21,12 @@ const DietaryPrefsPage = () => {
   const [preferences, setPreferences] = useState<DietaryPreference[]>([])
   
   useEffect(() => {
-    // Only redirect if we're done loading and not authenticated
     if (!isLoading && !isAuthenticated) {
       navigate("/login")
       return
     }
   }, [isAuthenticated, navigate, isLoading])
 
-  // Fetch dietary preferences when component loads
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -37,44 +36,42 @@ const DietaryPrefsPage = () => {
         setPreferences(response.data);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching dietary preferences:", error);
+        console.error("Failed to fetch dietary preferences", error);
         setLoading(false);
       }
     };
-
+    
     fetchPreferences();
   }, [isAuthenticated]);
 
   const togglePreference = (id: string) => {
-    setPreferences(prev => 
-      prev.map(pref => 
-        pref.id === id ? { ...pref, isSelected: !pref.isSelected } : pref
-      )
-    );
-  }
+    setPreferences(preferences.map(pref => 
+      pref.id === id ? { ...pref, isSelected: !pref.isSelected } : pref
+    ));
+  };
 
   const handleSave = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      // Get IDs of selected preferences
       const selectedPreferences = preferences
         .filter(pref => pref.isSelected)
         .map(pref => pref.id);
       
       await recommendations.updateDietaryPreferences(selectedPreferences);
-      
-      // Explicitly refresh recommendations to get AI updates right away
-      await recommendations.refreshRecommendations();
-      
-      // Navigate back
-      navigate("/home");
+      setSaving(false);
+      navigate('/recipes');
     } catch (error) {
-      console.error("Error saving dietary preferences:", error);
+      console.error("Failed to save preferences", error);
       setSaving(false);
     }
-  }
+  };
 
-  if (isLoading || loading) {
+  // Handle image errors by showing a fallback
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = "/images/dietary/placeholder.png";
+  };
+
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-red-400 flex items-center justify-center">
         <div className="loading loading-spinner loading-lg text-white"></div>
@@ -84,8 +81,20 @@ const DietaryPrefsPage = () => {
 
   return (
     <div className="min-h-screen bg-red-400 p-4">
+      {/* Header */}
       <div className="flex justify-between items-center mb-8 px-1">
-        <div className="flex-1"></div>
+        <div className="flex-1">
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-red-500 hover:bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110"
+            aria-label="Go back"
+            title="Go back"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
         <div className="text-center flex-1">
           <h1 className="text-white text-2xl font-bold">Dietary Preferences</h1>
         </div>
@@ -94,37 +103,56 @@ const DietaryPrefsPage = () => {
         </div>
       </div>
 
-      <div className="mb-6">
-        <p className="text-white/80 text-sm text-center">
-          Select your dietary preferences to help us recommend suitable recipes for you.
-        </p>
-      </div>
+      <div className="container mx-auto">
+        <div className="max-w-3xl mx-auto">
+          {/* Description */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-6 text-center">
+            <p className="text-white">
+              Select your dietary preferences to help us recommend suitable recipes for you.
+            </p>
+          </div>
 
-      <div className="bg-white rounded-lg p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {preferences.map((preference) => (
-            <label key={preference.id} className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                checked={preference.isSelected}
-                onChange={() => togglePreference(preference.id)}
+          {/* Preferences card */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            <div className="p-6">
+              <h2 className="font-semibold text-gray-800 mb-5 text-xl border-b-2 border-red-400 pb-2">
+                Select Your Preferences
+              </h2>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {preferences.map((preference) => (
+                  <AllergyItem
+                    key={preference.id}
+                    name={preference.name}
+                    image={`/images/dietary/${preference.id}.png`}
+                    isSelected={preference.isSelected}
+                    onToggle={() => togglePreference(preference.id)}
+                    onError={handleImageError}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Footer with save button */}
+            <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-end">
+              <button 
+                className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-md shadow-md"
+                onClick={handleSave}
                 disabled={saving}
-              />
-              <span className="text-gray-700">{preference.name}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+              >
+                {saving ? 'Saving...' : 'Save Preferences'}
+              </button>
+            </div>
+          </div>
 
-      <div className="flex justify-center">
-        <button 
-          className={`btn bg-red-500 hover:bg-red-600 text-white border-none px-8 ${saving ? 'loading' : ''}`} 
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save Preferences'}
-        </button>
+          {/* Information card */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-6 text-center">
+            <p className="text-white text-sm">
+              Your preferences help us filter recipes that match your dietary needs.
+              You can update these preferences anytime.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
