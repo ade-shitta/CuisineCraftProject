@@ -218,8 +218,8 @@ const RecipeDetailsPage: React.FC = () => {
     }
   }, [recipe]);
 
-  if ((authLoading || loading) && showLoader) {
-    return <LoadingSpinner />;
+  if (loading) {
+    return showLoader ? <LoadingSpinner /> : null; // Don't render anything during initial load if spinner isn't showing yet
   }
 
   if (error || !recipe) {
