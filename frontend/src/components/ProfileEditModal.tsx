@@ -18,6 +18,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(user?.profilePicture || null);
+  const [isHovering, setIsHovering] = useState(false);
 
   // Reset form when modal opens with latest user data
   useEffect(() => {
@@ -48,6 +49,12 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
     }
   };
 
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,32 +69,16 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
       formData.append('firstName', firstName);
       formData.append('lastName', lastName);
       
-      // Make sure we're using the correct field name that matches the serializer
       if (selectedFile) {
         formData.append('profileImage', selectedFile);
       }
 
-      // For debugging - log what we're sending
-      console.log('Updating profile with data:', {
-        username,
-        email,
-        firstName,
-        lastName,
-        has_profile_image: !!selectedFile
-      });
-
-      // Update the user profile
       const updateResponse = await auth.updateProfile(formData);
       console.log('Profile update response:', updateResponse);
 
-      // Refresh the user data after update
       if (user) {
-        // Get updated profile info
         const response = await auth.getProfile();
-        console.log('Retrieved updated profile:', response.data);
-        console.log('Profile image URL:', response.data.profileImage);
         
-        // Update user in context with the new data
         updateUser({
           id: response.data.id,
           username: response.data.username,
@@ -98,27 +89,16 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           profilePicture: response.data.profileImage,
         });
         
-        // Close the modal after successful update
         onClose();
       }
     } catch (err: any) {
       console.error('Profile update error:', err);
       
-      // More detailed error information
       if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response data:', err.response.data);
-        console.error('Error response status:', err.response.status);
-        console.error('Error response headers:', err.response.headers);
         setError(`Error ${err.response.status}: ${err.response.data?.message || err.response.data?.detail || 'Failed to update profile'}`);
       } else if (err.request) {
-        // The request was made but no response was received
-        console.error('Error request:', err.request);
         setError('No response received from server. Check your connection.');
       } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error message:', err.message);
         setError(`Error: ${err.message}`);
       }
     } finally {
@@ -132,17 +112,42 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg p-6 w-full max-w-md"
+        className="rounded-lg p-6 w-full max-w-md"
+        style={{ backgroundColor: "#ff7b7b" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Edit Profile</h2>
+        <h2 className="text-2xl font-bold mb-4 text-white">Edit Profile</h2>
         
         {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</div>}
         
         <form onSubmit={handleSubmit}>
-          {/* Profile Picture Preview */}
+          {/* Hidden file input */}
+          <input 
+            id="profilePicture"
+            type="file" 
+            className="hidden"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            aria-label="Profile Picture"
+            accept="image/*"
+          />
+
+          {/* Profile Picture Preview - Now Clickable */}
           <div className="mb-6 flex flex-col items-center">
-            <div className="w-24 h-24 rounded-full mb-3 overflow-hidden border-2 border-gray-300">
+            <div 
+              className="relative w-32 h-32 rounded-full mb-3 overflow-hidden border-4 border-white group cursor-pointer"
+              onClick={triggerFileInput}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              role="button"
+              aria-label="Change profile picture"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  triggerFileInput();
+                }
+              }}
+            >
               {previewUrl ? (
                 <img 
                   src={previewUrl} 
@@ -150,30 +155,36 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                <div className="w-full h-full bg-white bg-opacity-90 flex items-center justify-center text-gray-500">
                   No Image
                 </div>
               )}
+              
+              {/* Overlay with edit icon/text */}
+              <div 
+                className={`absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-white transition-opacity ${
+                  isHovering ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-xs font-semibold">Change Photo</span>
+              </div>
             </div>
             
-            <label htmlFor="profilePicture" className="block text-gray-700 mb-1">Profile Picture</label>
-            <input 
-              id="profilePicture"
-              type="file" 
-              className="w-full p-2 border border-gray-300 rounded"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              aria-label="Profile Picture"
-              accept="image/*"
-            />
+            <p className="text-white text-sm text-center mb-2">
+              Click on the image to change your profile picture
+            </p>
           </div>
           
           <div className="mb-4">
-            <label htmlFor="firstName" className="block text-gray-700 mb-1">First Name</label>
+            <label htmlFor="firstName" className="block text-white mb-1">First Name</label>
             <input 
               id="firstName"
               type="text" 
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full py-3 px-4 rounded-3xl bg-white bg-opacity-90 border-none text-gray-800"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               aria-label="First Name"
@@ -183,11 +194,11 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           </div>
           
           <div className="mb-4">
-            <label htmlFor="lastName" className="block text-gray-700 mb-1">Last Name</label>
+            <label htmlFor="lastName" className="block text-white mb-1">Last Name</label>
             <input 
               id="lastName"
               type="text" 
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full py-3 px-4 rounded-3xl bg-white bg-opacity-90 border-none text-gray-800"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               aria-label="Last Name"
@@ -197,11 +208,11 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           </div>
           
           <div className="mb-4">
-            <label htmlFor="username" className="block text-gray-700 mb-1">Username</label>
+            <label htmlFor="username" className="block text-white mb-1">Username</label>
             <input 
               id="username"
               type="text" 
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full py-3 px-4 rounded-3xl bg-white bg-opacity-90 border-none text-gray-800"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               aria-label="Username"
@@ -211,11 +222,11 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           </div>
           
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 mb-1">Email</label>
+            <label htmlFor="email" className="block text-white mb-1">Email</label>
             <input 
               id="email"
               type="email" 
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full py-3 px-4 rounded-3xl bg-white bg-opacity-90 border-none text-gray-800"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               aria-label="Email"
@@ -224,10 +235,10 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
             />
           </div>
           
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-800"
+              className="px-4 py-3 bg-white bg-opacity-25 rounded-3xl hover:bg-opacity-40 text-white font-bold"
               onClick={onClose}
               disabled={isLoading}
             >
@@ -235,7 +246,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-red-500 rounded hover:bg-red-600 text-white"
+              className="px-4 py-3 bg-red-500 rounded-3xl hover:bg-red-600 text-white font-bold"
               disabled={isLoading}
             >
               {isLoading ? 'Saving...' : 'Save Changes'}
@@ -247,4 +258,4 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
   );
 };
 
-export default ProfileEditModal; 
+export default ProfileEditModal;
