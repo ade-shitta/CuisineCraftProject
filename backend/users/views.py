@@ -15,10 +15,14 @@ def home(request: HttpRequest) -> HttpResponse:
 def register(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
+        print(f"Form submitted with data: {request.POST}")
         if form.is_valid():
+            print("Form is valid, creating user")
             user = form.save()
             login(request, user)
             return redirect('home')
+        else:
+            print(f"Form validation errors: {form.errors}")
     else:
         form = UserRegistrationForm()
     return render(request, 'auth/register.html', {'form': form})

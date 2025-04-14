@@ -30,6 +30,16 @@
         </div>
         {% endif %}
         
+        <!-- Add after the favorite button -->
+        {% if user.is_authenticated %}
+            <div class="recipe-actions">
+                <!-- Favorite button code here -->
+                <a href="{% url 'mark_recipe_cooked' recipe.recipe_id %}" class="cook-btn">
+                    🍴 I cooked this!
+                </a>
+            </div>
+        {% endif %}
+        
         {% if recipe.dietary_tags %}
         <div class="recipe-section">
             <h2>Dietary Tags</h2>
