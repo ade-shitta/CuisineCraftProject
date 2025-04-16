@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import Header from "../components/Header"
@@ -294,7 +292,7 @@ const RecipeDetailsPage: React.FC = () => {
               e.preventDefault();
               handleModalOpen();
             }}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 hover:text-blue-800 font-medium underline"
           >
             View Recipe Details
           </a>
@@ -319,6 +317,17 @@ const RecipeDetailsPage: React.FC = () => {
             <p className="text-black">No ingredients available for this recipe</p>
           </div>
         )}
+
+        <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-md">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">Note:</span> Nutritional values may vary depending on the specific brands and ingredients you purchase and choose to use.
+            </p>
+          </div>
+        </div>
       </div>
 
       {showModal && (
