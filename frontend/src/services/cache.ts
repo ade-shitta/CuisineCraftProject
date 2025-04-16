@@ -10,6 +10,11 @@ const cache = new Map<string, CacheEntry>();
 // Track the last 10 invalidated caches for debugging
 const recentInvalidations: string[] = [];
 
+// Default cache durations based on content type
+const DEFAULT_TTL = 300; // 5 minutes for general content
+const RECOMMENDATIONS_TTL = 600; // 10 minutes for recommendations
+const FAVORITES_TTL = 300; // 5 minutes for favorites
+
 export const cacheService = {
   get: (key: string) => {
     const cachedItem = cache.get(key);
@@ -24,9 +29,34 @@ export const cacheService = {
     return cachedItem.data;
   },
   
-  set: (key: string, data: any, ttlSeconds = 300) => {
+  set: (key: string, data: any, ttlSeconds = DEFAULT_TTL) => {
+    // Apply longer TTL for recommendations automatically
+    if (key.startsWith('recommendations:')) {
+      ttlSeconds = RECOMMENDATIONS_TTL;
+    }
+    
     const expiry = Date.now() + (ttlSeconds * 1000);
     cache.set(key, { data, expiry, key });
+  },
+  
+  prefetch: async (key: string, fetchFn: () => Promise<any>, ttlSeconds = DEFAULT_TTL) => {
+    // Check if we already have a valid cached entry
+    const existingEntry = cache.get(key);
+    if (existingEntry && Date.now() < existingEntry.expiry) {
+      return existingEntry.data;
+    }
+    
+    try {
+      // Fetch the data
+      const response = await fetchFn();
+      // Store it in cache
+      const data = response.data || response;
+      cacheService.set(key, data, ttlSeconds);
+      return data;
+    } catch (error) {
+      console.error(`Error prefetching ${key}:`, error);
+      throw error;
+    }
   },
   
   invalidate: (keyOrPattern: string | RegExp) => {
@@ -71,4 +101,4 @@ export const cacheService = {
     cache.clear();
     recentInvalidations.length = 0;
   }
-}; 
+};

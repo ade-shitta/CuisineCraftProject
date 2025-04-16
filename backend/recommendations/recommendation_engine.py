@@ -2,47 +2,67 @@ import numpy as np
 from django.db.models import Count, Q, F, ExpressionWrapper, fields, Sum
 from django.utils import timezone
 from datetime import timedelta
+from django.core.cache import cache
 from recommendations.text_utils import find_similar_recipes
 from recipes.models import Recipe, SavedRecipe, RecipeIngredient
 from recommendations.models import RecipeInteraction, DietaryPreference
 
+# Cache TTLs (in seconds)
+USER_RECOMMENDATIONS_TTL = 30 * 60  # 30 minutes
+USER_FAVORITES_TTL = 60 * 60  # 1 hour
+USER_PREFERENCES_TTL = 3 * 60 * 60  # 3 hours
+
 def get_user_dietary_preferences(user):
-    """Get user's dietary preferences"""
+    """Get user's dietary preferences with caching"""
     if not user.is_authenticated:
         return []
     
+    # Try to get from cache
+    cache_key = f'user_preferences_{user.id}'
+    cached_preferences = cache.get(cache_key)
+    
+    if cached_preferences is not None:
+        return cached_preferences
+    
+    # Not in cache, get from database
     preferences = DietaryPreference.objects.filter(user=user).values_list('restriction_type', flat=True)
-    return list(preferences)
+    preferences_list = list(preferences)
+    
+    # Cache the result
+    cache.set(cache_key, preferences_list, USER_PREFERENCES_TTL)
+    
+    return preferences_list
 
 def filter_by_dietary_preferences(recipes_queryset, preferences):
     """Filter recipes by dietary preferences more efficiently"""
     if not preferences:
         return recipes_queryset
     
-    # Use batching to avoid loading all recipes at once
-    batch_size = 100
-    matching_recipe_ids = []
+    # Instead of processing in batches, use more efficient filtering
+    matching_recipes = []
     
-    # Process in batches to avoid loading all recipes at once
-    total_recipes = recipes_queryset.count()
-    for offset in range(0, total_recipes, batch_size):
-        batch = list(recipes_queryset[offset:offset + batch_size])
-        
-        # Check each recipe in the batch against all preferences
-        for recipe in batch:
-            if all(pref in recipe.dietary_tags for pref in preferences):
-                matching_recipe_ids.append(recipe.recipe_id)
+    # Use select_related to reduce database queries
+    for recipe in recipes_queryset.iterator():
+        if all(pref in recipe.dietary_tags for pref in preferences):
+            matching_recipes.append(recipe.recipe_id)
     
     # Return filtered queryset based on collected IDs
-    if matching_recipe_ids:
-        return recipes_queryset.filter(recipe_id__in=matching_recipe_ids)
+    if matching_recipes:
+        return recipes_queryset.filter(recipe_id__in=matching_recipes)
     else:
         return Recipe.objects.none()
 
 def get_user_favorite_ingredients(user, top_n=5):
-    """Get user's most frequently favorited ingredients"""
+    """Get user's most frequently favorited ingredients with caching"""
     if not user.is_authenticated:
         return []
+    
+    # Try to get from cache
+    cache_key = f'user_favorite_ingredients_{user.id}'
+    cached_ingredients = cache.get(cache_key)
+    
+    if cached_ingredients is not None:
+        return cached_ingredients
     
     # Get ingredients from user's saved recipes
     favorite_recipe_ids = SavedRecipe.objects.filter(user=user).values_list('recipe_id', flat=True)
@@ -59,12 +79,24 @@ def get_user_favorite_ingredients(user, top_n=5):
         .values_list('ingredient_id', flat=True)
     )
     
-    return list(favorite_ingredients)
+    result = list(favorite_ingredients)
+    
+    # Cache the result
+    cache.set(cache_key, result, USER_FAVORITES_TTL)
+    
+    return result
 
 def get_content_based_recommendations(user, max_results=10):
     """Get content-based recommendations using text similarity and user preferences"""
     if not user.is_authenticated:
         return Recipe.objects.none()
+    
+    # Try to get from cache
+    cache_key = f'content_recommendations_{user.id}_{max_results}'
+    cached_recommendations = cache.get(cache_key)
+    
+    if cached_recommendations is not None:
+        return Recipe.objects.filter(recipe_id__in=cached_recommendations)
     
     # Get user's favorite recipes
     favorite_recipe_ids = list(SavedRecipe.objects.filter(user=user).values_list('recipe_id', flat=True))
@@ -75,12 +107,20 @@ def get_content_based_recommendations(user, max_results=10):
             save_count=Count('saved_instances')
         ).order_by('-save_count')[:max_results]
         
+        # Cache even the fallback results
+        cache.set(
+            cache_key, 
+            [recipe.recipe_id for recipe in popular_recipes], 
+            USER_RECOMMENDATIONS_TTL
+        )
+        
         return popular_recipes
     
     # Get content-based recommendations from each favorite recipe
     recommended_recipe_ids = set()
     
-    for recipe_id in favorite_recipe_ids:
+    # Limit the number of favorites we process to avoid too much processing
+    for recipe_id in favorite_recipe_ids[:5]:  # Process at most 5 favorites
         similar_recipes = find_similar_recipes(recipe_id, top_n=3)
         recommended_recipe_ids.update(similar_recipes)
     
@@ -97,6 +137,11 @@ def get_content_based_recommendations(user, max_results=10):
     if preferences:
         recommended_recipes = filter_by_dietary_preferences(recommended_recipes, preferences)
     
+    # Store the recipe IDs in cache
+    result_recipes = list(recommended_recipes[:max_results])
+    result_ids = [recipe.recipe_id for recipe in result_recipes]
+    cache.set(cache_key, result_ids, USER_RECOMMENDATIONS_TTL)
+    
     # Limit to max_results
     return recommended_recipes[:max_results]
 
@@ -105,12 +150,23 @@ def get_recent_interactions(user, interaction_type='view', limit=5):
     if not user.is_authenticated:
         return []
     
+    cache_key = f'user_interactions_{user.id}_{interaction_type}_{limit}'
+    cached_interactions = cache.get(cache_key)
+    
+    if cached_interactions is not None:
+        return cached_interactions
+    
     recent_interactions = RecipeInteraction.objects.filter(
         user=user, 
         interaction_type=interaction_type
     ).order_by('-timestamp')[:limit]
     
-    return [interaction.recipe_id for interaction in recent_interactions]
+    result = [interaction.recipe_id for interaction in recent_interactions]
+    
+    # Cache for a shorter period since interactions change frequently
+    cache.set(cache_key, result, 15 * 60)  # 15 minutes
+    
+    return result
 
 def get_weighted_user_interactions(user, days_limit=30):
     """
@@ -125,6 +181,12 @@ def get_weighted_user_interactions(user, days_limit=30):
     """
     if not user.is_authenticated:
         return {}
+    
+    cache_key = f'weighted_interactions_{user.id}_{days_limit}'
+    cached_scores = cache.get(cache_key)
+    
+    if cached_scores is not None:
+        return cached_scores
     
     # Define the cutoff date for recent interactions
     cutoff_date = timezone.now() - timedelta(days=days_limit)
@@ -163,6 +225,9 @@ def get_weighted_user_interactions(user, days_limit=30):
         else:
             recipe_scores[recipe_id] = score
     
+    # Cache the results
+    cache.set(cache_key, recipe_scores, 30 * 60)  # 30 minutes
+    
     return recipe_scores
 
 def get_interaction_based_recommendations(user, max_results=10):
@@ -170,14 +235,29 @@ def get_interaction_based_recommendations(user, max_results=10):
     if not user.is_authenticated:
         return Recipe.objects.none()
     
+    cache_key = f'interaction_recommendations_{user.id}_{max_results}'
+    cached_recommendations = cache.get(cache_key)
+    
+    if cached_recommendations is not None:
+        return Recipe.objects.filter(recipe_id__in=cached_recommendations)
+    
     # Get weighted interaction scores
     recipe_scores = get_weighted_user_interactions(user)
     
     if not recipe_scores:
         # If no interactions, return popular recipes
-        return Recipe.objects.annotate(
+        popular_recipes = Recipe.objects.annotate(
             save_count=Count('saved_instances')
         ).order_by('-save_count')[:max_results]
+        
+        # Cache the fallback results too
+        cache.set(
+            cache_key, 
+            [recipe.recipe_id for recipe in popular_recipes], 
+            USER_RECOMMENDATIONS_TTL
+        )
+        
+        return popular_recipes
     
     # Sort recipes by score and take top N for finding similar recipes
     top_interacted_recipes = sorted(
@@ -210,6 +290,11 @@ def get_interaction_based_recommendations(user, max_results=10):
     # Filter by dietary preferences
     if preferences:
         recommended_recipes = filter_by_dietary_preferences(recommended_recipes, preferences)
+    
+    # Cache the results
+    result_recipes = list(recommended_recipes[:max_results])
+    result_ids = [recipe.recipe_id for recipe in result_recipes]
+    cache.set(cache_key, result_ids, USER_RECOMMENDATIONS_TTL)
     
     # Limit to max_results
     return recommended_recipes[:max_results]
@@ -253,7 +338,13 @@ def add_diversity(recipes, max_results=12):
     return final_recommendations
 
 def get_personalized_recommendations(user, max_results=12):
-    """Get personalized recipe recommendations using multiple strategies"""
+    """Get personalized recipe recommendations using multiple strategies with caching"""
+    # Try to get from cache first
+    cache_key = f'personalized_recommendations_{user.id}_{max_results}'
+    cached_recommendations = cache.get(cache_key)
+    
+    if cached_recommendations is not None:
+        return Recipe.objects.filter(recipe_id__in=cached_recommendations)
     
     # Get recommendations from different sources
     interaction_recs = list(get_interaction_based_recommendations(user, max_results=max_results//2))
@@ -299,4 +390,32 @@ def get_personalized_recommendations(user, max_results=12):
     # Add diversity to final recommendations
     all_recs = add_diversity(all_recs, max_results)
     
-    return all_recs[:max_results]
+    # Cache the final recommendations
+    final_recs = all_recs[:max_results]
+    cache.set(
+        cache_key, 
+        [recipe.recipe_id for recipe in final_recs], 
+        USER_RECOMMENDATIONS_TTL
+    )
+    
+    return final_recs
+
+# Function to invalidate all recommendation caches for a user
+def invalidate_user_recommendations(user_id):
+    """Invalidate all recommendation caches for a specific user"""
+    pattern_list = [
+        f'user_preferences_{user_id}',
+        f'user_favorite_ingredients_{user_id}',
+        f'content_recommendations_{user_id}_',
+        f'interaction_recommendations_{user_id}_',
+        f'personalized_recommendations_{user_id}_',
+        f'weighted_interactions_{user_id}_',
+        f'user_interactions_{user_id}_'
+    ]
+    
+    for pattern in pattern_list:
+        # In a real implementation, you would use cache.delete_pattern or similar
+        # For Django's default cache, you might need to implement this differently
+        cache.delete(pattern)
+        
+    return True

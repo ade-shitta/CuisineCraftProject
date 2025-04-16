@@ -159,8 +159,8 @@ export const recommendations = {
     if (cached) return { data: cached };
     
     const response = await api.get(`/recommendations/api/recommended/?limit=${limit}`);
-    // Cache for a shorter time since recommendations are more dynamic now
-    cacheService.set(cacheKey, response.data, 180); // 3 minutes cache instead of default 5
+    // Cache for a longer time since we've increased the TTL in the cache service
+    cacheService.set(cacheKey, response.data);
     return response;
   },
   // Adding function to explicitly refresh recommendations
@@ -169,8 +169,16 @@ export const recommendations = {
     cacheService.invalidate(/^recommendations:recommended/);
     // Then fetch fresh data
     const response = await api.get(`/recommendations/api/recommended/?limit=${limit}`);
-    cacheService.set(`recommendations:recommended:${limit}`, response.data, 180);
+    cacheService.set(`recommendations:recommended:${limit}`, response.data);
     return response;
+  },
+  // New method to prefetch recommendations when app loads
+  prefetchRecommendations: async (limit = 12) => {
+    const cacheKey = `recommendations:recommended:${limit}`;
+    return cacheService.prefetch(
+      cacheKey,
+      () => api.get(`/recommendations/api/recommended/?limit=${limit}`)
+    );
   }
 };
 

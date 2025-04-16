@@ -1,19 +1,33 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { recommendations } from './services/api';
+
+// Lazy load the App component
+const App = React.lazy(() => import('./App'));
+
+// Prefetch recommendations data as soon as the app loads
+// This will run in the background and populate the cache
+if (navigator.onLine) {
+  recommendations.prefetchRecommendations().catch(err => {
+    // Silent fail - we'll fetch on demand if prefetch fails
+    console.debug('Background prefetch failed:', err);
+  });
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <App />
+    </React.Suspense>
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// Only measure performance in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  reportWebVitals();
+}

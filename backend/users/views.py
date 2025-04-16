@@ -4,12 +4,11 @@ from django.http import HttpRequest, HttpResponse
 from django.contrib.auth.decorators import login_required
 from .forms import UserRegistrationForm, UserLoginForm, UserUpdateForm
 from recipes.models import SavedRecipe
+from django.views.decorators.cache import cache_page  # Add this import
 
 # Create your views here.
-# @login_required
+@cache_page(60 * 15)  # Cache the homepage for 15 minutes
 def home(request: HttpRequest) -> HttpResponse:
-    # if not request.user.is_authenticated:
-    #     return redirect('login')
     return render(request, 'spa/index.html')
 
 def register(request):

@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
@@ -7,6 +5,16 @@ import Header from "../components/Header"
 import RecipeCard from "../components/RecipeCard"
 import { recipes, recommendations } from "../services/api"
 import { ApiRecipe } from "../types/api"
+
+const RecipeCardSkeleton = () => (
+  <div className="flex-shrink-0 transform w-40 h-40">
+    <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-md bg-gray-200 animate-pulse">
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl py-2">
+        <div className="w-3/4 h-4 bg-gray-200 mx-auto"></div>
+      </div>
+    </div>
+  </div>
+);
 
 const HomePage = () => {
   const { user, isAuthenticated, isLoading } = useAuth()
@@ -16,38 +24,26 @@ const HomePage = () => {
   const [recipeData, setRecipeData] = useState<any[]>([])
   const [recommendedRecipes, setRecommendedRecipes] = useState<any[]>([])
   const [favorites, setFavorites] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   
-  // Refs for scrollable containers
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true)
+  const [loadingFavorites, setLoadingFavorites] = useState(true)
+  
   const discoverScrollRef = useRef<HTMLDivElement>(null)
   const favoritesScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Only redirect if we're done loading and not authenticated
     if (!isLoading && !isAuthenticated) {
       navigate("/login")
       return
     }
   }, [isAuthenticated, navigate, isLoading])
 
-  const fetchAllData = async () => {
+  const fetchRecommendations = async () => {
     if (!isAuthenticated) return;
     
-    setLoading(true);
+    setLoadingRecommendations(true);
     try {
-      // Run these requests in parallel for better performance
-      const [recipesResponse, recommendedResponse, favoritesResponse] = await Promise.all([
-        recipes.getAll(),
-        recommendations.getRecommended(12),
-        recipes.getFavorites()
-      ]);
-      
-      setRecipeData(recipesResponse.data.map((recipe: ApiRecipe) => ({
-        id: recipe.recipe_id,
-        title: recipe.title,
-        image: recipe.image_url,
-        isFavorite: recipe.isFavorite
-      })));
+      const recommendedResponse = await recommendations.getRecommended(12);
       
       setRecommendedRecipes(recommendedResponse.data.map((recipe: ApiRecipe) => ({
         id: recipe.recipe_id,
@@ -55,6 +51,19 @@ const HomePage = () => {
         image: recipe.image_url,
         isFavorite: recipe.isFavorite
       })));
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  }
+  
+  const fetchFavorites = async () => {
+    if (!isAuthenticated) return;
+    
+    setLoadingFavorites(true);
+    try {
+      const favoritesResponse = await recipes.getFavorites();
       
       setFavorites(favoritesResponse.data.map((recipe: ApiRecipe) => ({
         id: recipe.recipe_id,
@@ -63,9 +72,9 @@ const HomePage = () => {
         isFavorite: true
       })));
     } catch (error) {
-      console.error("Error fetching recipes:", error);
+      console.error("Error fetching favorites:", error);
     } finally {
-      setLoading(false);
+      setLoadingFavorites(false);
     }
   }
 
@@ -75,14 +84,14 @@ const HomePage = () => {
       return
     }
 
-    fetchAllData();
+    fetchRecommendations();
+    fetchFavorites();
   }, [isAuthenticated, navigate, location.key])
 
   const handleToggleFavorite = async (id: string) => {
     try {
       await recipes.toggleFavorite(id);
       
-      // Update the recipe in all our state arrays
       setRecipeData(prevRecipes => 
         prevRecipes.map(recipe => 
           recipe.id === id 
@@ -99,14 +108,12 @@ const HomePage = () => {
         )
       );
       
-      // If this recipe is being removed from favorites, remove it from the favorites list
       const wasInFavorites = favorites.some(recipe => recipe.id === id);
       if (wasInFavorites) {
         setFavorites(prevFavorites => 
           prevFavorites.filter(recipe => recipe.id !== id)
         );
       } else {
-        // If it's being added to favorites, we need to fetch the updated favorites list
         const favoritesResponse = await recipes.getFavorites();
         setFavorites(favoritesResponse.data.map((recipe: ApiRecipe) => ({
           id: recipe.recipe_id,
@@ -116,8 +123,6 @@ const HomePage = () => {
         })));
       }
       
-      // Refresh recommendations based on updated favorites
-      // Delay it slightly to let the server-side AI processing complete
       setTimeout(async () => {
         try {
           const newRecommendations = await recommendations.refreshRecommendations(12);
@@ -136,27 +141,21 @@ const HomePage = () => {
     }
   }
   
-  // Scroll handlers for recipe navigation
   const scrollRecipes = (ref: { current: HTMLDivElement | null }, direction: 'left' | 'right') => {
     if (!ref.current) return;
     
-    // Get the scroll container
     const scrollContainer = ref.current;
     
-    // Clear any existing scroll animations
     scrollContainer.style.scrollBehavior = 'auto';
     
-    // Get the width of a single recipe card + margin
-    const cardWidth = 128; // w-32 = 8rem = 128px
-    const marginRight = 16; // mr-4 = 1rem = 16px
+    const cardWidth = 128; 
+    const marginRight = 16; 
     const scrollAmount = cardWidth + marginRight;
     
-    // Calculate the new scroll position
     const newPosition = direction === 'left'
       ? scrollContainer.scrollLeft - scrollAmount
       : scrollContainer.scrollLeft + scrollAmount;
     
-    // Reset smooth scrolling and scroll to the new position
     setTimeout(() => {
       scrollContainer.style.scrollBehavior = 'smooth';
       scrollContainer.scrollLeft = newPosition;
@@ -169,12 +168,6 @@ const HomePage = () => {
         <div className="loading loading-spinner loading-lg text-white"></div>
       </div>
     );
-  }
-
-  if (loading) {
-    return <div className="min-h-screen bg-red-400 p-4 flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-white"></span>
-    </div>
   }
 
   return (
@@ -221,39 +214,46 @@ const HomePage = () => {
           className="flex gap-4 overflow-x-auto hide-scrollbar"
           style={{ scrollBehavior: 'smooth' }}
         >
-          {recommendedRecipes.map((recipe) => (
-            <div className="flex-shrink-0 transform transition duration-300 hover:scale-105" key={recipe.id}>
-              <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all">
-                <img 
-                  src={recipe.image} 
-                  alt={recipe.title} 
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                />
-                <button 
-                  className="absolute top-2 right-2 bg-pink-100 rounded-full p-1.5 shadow-sm hover:bg-pink-200 transition-colors duration-300"
-                  onClick={() => handleToggleFavorite(recipe.id)}
-                  aria-label={recipe.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className={`h-5 w-5 ${recipe.isFavorite ? 'text-red-500' : 'text-gray-400'} transition-colors duration-300`} 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
+          {loadingRecommendations ? (
+            Array(6).fill(0).map((_, index) => (
+              <RecipeCardSkeleton key={`skeleton-${index}`} />
+            ))
+          ) : (
+            recommendedRecipes.map((recipe) => (
+              <div className="flex-shrink-0 transform transition duration-300 hover:scale-105" key={recipe.id}>
+                <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all">
+                  <img 
+                    src={recipe.image} 
+                    alt={recipe.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    onClick={() => navigate(`/recipe/${recipe.id}`)}
+                    loading="lazy" 
+                  />
+                  <button 
+                    className="absolute top-2 right-2 bg-pink-100 rounded-full p-1.5 shadow-sm hover:bg-pink-200 transition-colors duration-300"
+                    onClick={() => handleToggleFavorite(recipe.id)}
+                    aria-label={recipe.isFavorite ? "Remove from favorites" : "Add to favorites"}
                   >
-                    <path 
-                      fillRule="evenodd" 
-                      d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" 
-                      clipRule="evenodd" 
-                    />
-                  </svg>
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl py-2">
-                  <p className="text-center text-gray-800 font-medium text-sm">{recipe.title}</p>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-5 w-5 ${recipe.isFavorite ? 'text-red-500' : 'text-gray-400'} transition-colors duration-300`} 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl py-2">
+                    <p className="text-center text-gray-800 font-medium text-sm">{recipe.title}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -288,39 +288,46 @@ const HomePage = () => {
           className="flex overflow-x-auto hide-scrollbar gap-4"
           style={{ scrollBehavior: 'smooth' }}
         >
-          {favorites.slice(0, 12).map((recipe) => (
-            <div className="flex-shrink-0 transform transition duration-300 hover:scale-105" key={recipe.id}>
-              <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all">
-                <img 
-                  src={recipe.image} 
-                  alt={recipe.title} 
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                />
-                <button 
-                  className="absolute top-2 right-2 bg-pink-100 rounded-full p-1.5 shadow-sm hover:bg-pink-200 transition-colors duration-300"
-                  onClick={() => handleToggleFavorite(recipe.id)}
-                  aria-label="Remove from favorites"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5 text-red-500" 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
+          {loadingFavorites ? (
+            Array(4).fill(0).map((_, index) => (
+              <RecipeCardSkeleton key={`skeleton-fav-${index}`} />
+            ))
+          ) : (
+            favorites.slice(0, 12).map((recipe) => (
+              <div className="flex-shrink-0 transform transition duration-300 hover:scale-105" key={recipe.id}>
+                <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all">
+                  <img 
+                    src={recipe.image} 
+                    alt={recipe.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    onClick={() => navigate(`/recipe/${recipe.id}`)}
+                    loading="lazy" 
+                  />
+                  <button 
+                    className="absolute top-2 right-2 bg-pink-100 rounded-full p-1.5 shadow-sm hover:bg-pink-200 transition-colors duration-300"
+                    onClick={() => handleToggleFavorite(recipe.id)}
+                    aria-label="Remove from favorites"
                   >
-                    <path 
-                      fillRule="evenodd" 
-                      d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" 
-                      clipRule="evenodd" 
-                    />
-                  </svg>
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl py-2">
-                  <p className="text-center text-gray-800 font-medium text-sm">{recipe.title}</p>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5 text-red-500" 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl py-2">
+                    <p className="text-center text-gray-800 font-medium text-sm">{recipe.title}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
