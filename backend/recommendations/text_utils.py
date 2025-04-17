@@ -308,34 +308,108 @@ def suggest_ingredient_substitutions(ingredient_name):
     Returns:
         List of potential substitute ingredients
     """
-    # Common substitution pairs (can be expanded)
+    # Define ingredient categories for more flexible substitution
+    ingredient_categories = {
+        'oils_and_fats': [
+            'butter', 'margarine', 'olive oil', 'vegetable oil', 'coconut oil', 'canola oil',
+            'avocado oil', 'sesame oil', 'ghee', 'lard', 'shortening', 'bacon fat'
+        ],
+        'dairy': [
+            'milk', 'heavy cream', 'half and half', 'yogurt', 'greek yogurt', 'sour cream',
+            'buttermilk', 'cream cheese', 'cottage cheese', 'ricotta cheese'
+        ],
+        'plant_milk': [
+            'almond milk', 'soy milk', 'oat milk', 'coconut milk', 'rice milk', 
+            'cashew milk', 'hemp milk', 'flax milk', 'pea milk'
+        ],
+        'sweeteners': [
+            'sugar', 'brown sugar', 'honey', 'maple syrup', 'agave nectar', 'stevia',
+            'corn syrup', 'molasses', 'date syrup', 'coconut sugar', 'monk fruit sweetener'
+        ],
+        'flours': [
+            'all-purpose flour', 'whole wheat flour', 'bread flour', 'cake flour', 'pastry flour',
+            'almond flour', 'coconut flour', 'rice flour', 'oat flour', 'corn flour',
+            'chickpea flour', 'cassava flour', 'tapioca flour', 'buckwheat flour', 'spelt flour'
+        ],
+        'grains': [
+            'rice', 'quinoa', 'farro', 'barley', 'couscous', 'bulgur wheat', 'millet',
+            'polenta', 'oats', 'brown rice', 'wild rice', 'freekeh', 'rice noodles'
+        ],
+        'proteins': [
+            'chicken', 'beef', 'pork', 'turkey', 'fish', 'shrimp', 'tofu', 'tempeh',
+            'seitan', 'lentils', 'beans', 'chickpeas', 'eggs', 'textured vegetable protein'
+        ],
+        'herbs': [
+            'basil', 'parsley', 'cilantro', 'mint', 'rosemary', 'thyme', 'sage', 'oregano',
+            'dill', 'chives', 'tarragon', 'marjoram', 'bay leaves'
+        ],
+        'spices': [
+            'cinnamon', 'nutmeg', 'cloves', 'allspice', 'cardamom', 'cumin', 'coriander',
+            'paprika', 'turmeric', 'ginger', 'black pepper', 'white pepper', 'cayenne pepper',
+            'curry powder', 'garam masala', 'five spice powder', 'za\'atar'
+        ],
+        'vegetables': [
+            'onion', 'garlic', 'carrots', 'celery', 'bell peppers', 'tomatoes', 'potatoes',
+            'sweet potatoes', 'zucchini', 'eggplant', 'broccoli', 'cauliflower', 'spinach',
+            'kale', 'cabbage', 'Brussels sprouts', 'asparagus', 'green beans'
+        ],
+        'fruits': [
+            'apples', 'oranges', 'bananas', 'berries', 'peaches', 'plums', 'nectarines',
+            'pears', 'pineapple', 'mango', 'papaya', 'avocado', 'coconut', 'lemon', 'lime'
+        ],
+        'nuts_and_seeds': [
+            'almonds', 'walnuts', 'pecans', 'cashews', 'peanuts', 'hazelnuts', 'pistachios',
+            'chia seeds', 'flax seeds', 'sunflower seeds', 'pumpkin seeds', 'pine nuts',
+            'sesame seeds', 'hemp seeds'
+        ],
+        'thickeners': [
+            'cornstarch', 'arrowroot', 'tapioca starch', 'potato starch', 'xanthan gum',
+            'guar gum', 'gelatin', 'agar agar', 'pectin'
+        ],
+        'condiments': [
+            'ketchup', 'mustard', 'mayonnaise', 'soy sauce', 'tamari', 'coconut aminos',
+            'hot sauce', 'sriracha', 'worcestershire sauce', 'fish sauce', 'hoisin sauce',
+            'barbecue sauce', 'vinegar', 'lemon juice', 'lime juice'
+        ]
+    }
+    
+    # Direct substitution pairs for specific ingredients
     substitution_map = {
-        'butter': ['margarine', 'olive oil', 'coconut oil'],
-        'milk': ['almond milk', 'soy milk', 'oat milk', 'coconut milk'],
-        'cream': ['coconut cream', 'evaporated milk', 'greek yogurt'],
-        'eggs': ['applesauce', 'mashed banana', 'flaxseed mixed with water'],
-        'flour': ['almond flour', 'coconut flour', 'rice flour', 'oat flour'],
-        'sugar': ['honey', 'maple syrup', 'stevia', 'agave nectar'],
-        'rice': ['quinoa', 'cauliflower rice', 'bulgur wheat'],
-        'pasta': ['zucchini noodles', 'spaghetti squash', 'rice noodles'],
-        'beef': ['portobello mushrooms', 'lentils', 'seitan', 'plant-based beef'],
-        'chicken': ['tofu', 'tempeh', 'chickpeas', 'jackfruit'],
-        'fish': ['tofu', 'tempeh', 'heart of palm'],
-        'cheese': ['nutritional yeast', 'vegan cheese', 'cashew cheese'],
-        'soy sauce': ['tamari', 'coconut aminos', 'liquid aminos'],
-        'vinegar': ['lemon juice', 'lime juice'],
-        'wine': ['grape juice', 'broth'],
-        'breadcrumbs': ['crushed crackers', 'rolled oats', 'almond meal'],
-        'mayonnaise': ['greek yogurt', 'mashed avocado', 'hummus'],
-        'onion': ['shallots', 'leeks', 'green onions', 'onion powder'],
-        'garlic': ['shallots', 'garlic powder', 'chives'],
-        'tomatoes': ['red bell peppers', 'pumpkin', 'carrots'],
+        'butter': ['margarine', 'olive oil', 'coconut oil', 'ghee', 'applesauce', 'mashed banana'],
+        'milk': ['almond milk', 'soy milk', 'oat milk', 'coconut milk', 'rice milk', 'cashew milk'],
+        'cream': ['coconut cream', 'evaporated milk', 'greek yogurt', 'cashew cream', 'silken tofu cream'],
+        'eggs': ['applesauce', 'mashed banana', 'flaxseed mixed with water', 'chia seeds mixed with water', 'commercial egg replacer'],
+        'flour': ['almond flour', 'coconut flour', 'rice flour', 'oat flour', 'gluten-free flour blend', 'cassava flour'],
+        'sugar': ['honey', 'maple syrup', 'stevia', 'agave nectar', 'coconut sugar', 'date sugar', 'monk fruit sweetener'],
+        'rice': ['quinoa', 'cauliflower rice', 'bulgur wheat', 'farro', 'barley', 'couscous'],
+        'pasta': ['zucchini noodles', 'spaghetti squash', 'rice noodles', 'shirataki noodles', 'lentil pasta', 'chickpea pasta'],
+        'bread crumbs': ['crushed crackers', 'rolled oats', 'almond meal', 'cornmeal', 'ground flaxseed', 'crushed cereal'],
+        'beef': ['portobello mushrooms', 'lentils', 'seitan', 'plant-based beef', 'jackfruit', 'tofu'],
+        'chicken': ['tofu', 'tempeh', 'chickpeas', 'jackfruit', 'seitan', 'cauliflower'],
+        'fish': ['tofu', 'tempeh', 'heart of palm', 'chickpeas', 'jackfruit', 'seitan'],
+        'cheese': ['nutritional yeast', 'vegan cheese', 'cashew cheese', 'tofu ricotta', 'hummus'],
+        'soy sauce': ['tamari', 'coconut aminos', 'liquid aminos', 'worcestershire sauce', 'miso paste mixed with water'],
+        'vinegar': ['lemon juice', 'lime juice', 'apple cider vinegar', 'rice vinegar', 'white wine'],
+        'wine': ['grape juice', 'broth', 'pomegranate juice', 'cranberry juice', 'stock with a splash of vinegar'],
+        'breadcrumbs': ['crushed crackers', 'rolled oats', 'almond meal', 'cornmeal', 'ground flaxseed', 'crushed cereal'],
+        'mayonnaise': ['greek yogurt', 'mashed avocado', 'hummus', 'tahini', 'cashew cream', 'silken tofu dressing'],
+        'onion': ['shallots', 'leeks', 'green onions', 'onion powder', 'celery', 'fennel bulb'],
+        'garlic': ['shallots', 'garlic powder', 'chives', 'asafoetida', 'onion powder'],
+        'tomatoes': ['red bell peppers', 'pumpkin', 'carrots', 'roasted red bell peppers', 'sun-dried tomatoes'],
+        'tomato paste': ['ketchup', 'tomato sauce reduced', 'sun-dried tomato puree', 'red pepper paste'],
+        'broth/stock': ['bouillon cubes with water', 'miso paste with water', 'vegetable juice', 'dashi'],
+        'cornstarch': ['arrowroot powder', 'potato starch', 'tapioca starch', 'rice flour', 'all-purpose flour'],
+        'baking powder': ['baking soda with cream of tartar', 'self-rising flour', 'whipped egg whites', 'club soda'],
+        'chocolate chips': ['cacao nibs', 'carob chips', 'chopped chocolate bar', 'dried fruit bits'],
+        'sour cream': ['greek yogurt', 'crème fraîche', 'cottage cheese', 'buttermilk', 'cashew cream'],
+        'heavy cream': ['evaporated milk', 'coconut cream', 'silken tofu blended with soy milk', 'cashew cream'],
+        'honey': ['maple syrup', 'agave nectar', 'brown rice syrup', 'date syrup', 'molasses', 'corn syrup'],
     }
     
     # Convert to lowercase for comparison
     ingredient_name = ingredient_name.lower()
     
-    # Look for direct matches
+    # Look for direct matches in the substitution map
     for key, substitutes in substitution_map.items():
         if key in ingredient_name or ingredient_name in key:
             return substitutes
@@ -348,12 +422,35 @@ def suggest_ingredient_substitutions(ingredient_name):
         if key == singular or key == plural:
             return substitutes
     
-    # No direct match found, find related ingredient types
-    # This could be expanded with more sophisticated NLP techniques
+    # If no direct match, try to find the ingredient category
+    found_category = None
+    for category, ingredients in ingredient_categories.items():
+        if ingredient_name in ingredients:
+            found_category = category
+            break
+        
+        # Check singular/plural forms in categories too
+        if singular in ingredients or plural in ingredients:
+            found_category = category
+            break
+    
+    # If we found a category, suggest other ingredients from the same category
+    if found_category:
+        # Get all ingredients from the category
+        category_items = ingredient_categories[found_category]
+        
+        # Return up to 5 alternatives (excluding the original ingredient)
+        substitutes = [item for item in category_items if item != ingredient_name 
+                      and item != singular and item != plural][:5]
+        
+        if substitutes:
+            return substitutes
+    
+    # No direct match found, try prefix matching as a last resort
     for key, substitutes in substitution_map.items():
         if (len(key) >= 3 and key[:3] == ingredient_name[:3]) or \
            (len(ingredient_name) >= 3 and ingredient_name[:3] == key[:3]):
             return substitutes
     
-    # Return a generic "not found" response
+    # Return an empty list if no substitutes found
     return []
