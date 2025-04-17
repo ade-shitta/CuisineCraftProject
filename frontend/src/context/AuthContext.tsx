@@ -1,8 +1,7 @@
-
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { auth } from "../services/api";
 import { fetchCSRFToken } from "../services/csrf";
+import { cacheService } from "../services/cache";
 
 type User = {
   id: string;
@@ -100,6 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dateOfBirth: response.data.dateOfBirth,
         profilePicture: response.data.profileImage,
       });
+      
+      // Clear any cached recommendations from previous user
+      cacheService.invalidate(/^recommendations:/);
+      cacheService.invalidate(/^recipes:/);
     } catch (error) {
       throw error;
     }
@@ -118,9 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await auth.logout();
+      // Clear all user-specific caches when logging out
+      cacheService.invalidate(/^recommendations:/);
+      cacheService.invalidate(/^recipes:/);
       setUserAndStorage(null);
     } catch (error) {
-      // Even if logout API fails, clear local state
+      // Even if logout API fails, clear local state and caches
+      cacheService.invalidate(/^recommendations:/);
+      cacheService.invalidate(/^recipes:/);
       setUserAndStorage(null);
       throw error;
     }
