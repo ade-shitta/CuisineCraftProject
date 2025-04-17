@@ -10,4 +10,5 @@ urlpatterns = [
     # API endpoints
     path('api/preferences/', api.DietaryPreferenceView.as_view(), name='api-dietary-preferences'),
     path('api/recommended/', api.RecommendedRecipesView.as_view(), name='api-recommended-recipes'),
+    path('api/almost-matching/', api.AlmostMatchingRecipesView.as_view(), name='api-almost-matching-recipes'),
 ]

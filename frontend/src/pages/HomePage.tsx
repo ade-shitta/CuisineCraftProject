@@ -80,13 +80,12 @@ const HomePage = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate("/login")
       return
     }
 
     fetchRecommendations();
     fetchFavorites();
-  }, [isAuthenticated, navigate, location.key])
+  }, [isAuthenticated, navigate, location.key, user?.id])
 
   const handleToggleFavorite = async (id: string) => {
     try {
