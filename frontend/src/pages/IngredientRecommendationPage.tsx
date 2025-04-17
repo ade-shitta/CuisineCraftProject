@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
@@ -15,6 +13,18 @@ interface RecipeResult {
   isFavorite: boolean;
 }
 
+interface Substitution {
+  ingredient: string;
+  substitutes: string[];
+}
+
+interface AlmostMatchingRecipe {
+  recipe: ApiRecipe;
+  missing_ingredients: string[];
+  substitutions: Substitution[];
+  missing_count: number;
+}
+
 const IngredientRecommendationPage = () => {
   const { isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
@@ -23,8 +33,11 @@ const IngredientRecommendationPage = () => {
   // State variables
   const [ingredientsInput, setIngredientsInput] = useState("")
   const [recipeResults, setRecipeResults] = useState<RecipeResult[]>([])
+  const [almostMatchingRecipes, setAlmostMatchingRecipes] = useState<AlmostMatchingRecipe[]>([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'exact' | 'almost'>('exact')
+  const [expandedSubstitutions, setExpandedSubstitutions] = useState<Record<string, boolean>>({})
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -50,6 +63,14 @@ const IngredientRecommendationPage = () => {
     }
   }, [showModal])
 
+  // Toggle substitution expansion
+  const toggleSubstitution = (recipeId: string) => {
+    setExpandedSubstitutions(prev => ({
+      ...prev,
+      [recipeId]: !prev[recipeId]
+    }))
+  }
+
   // Handle ingredient search submission
   const handleSearchSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,9 +80,10 @@ const IngredientRecommendationPage = () => {
     setLoading(true)
     
     try {
-      const response = await recipesApi.searchByIngredients(ingredientsInput.trim())
+      // Fetch exact matching recipes
+      const exactMatchResponse = await recipesApi.searchByIngredients(ingredientsInput.trim())
       
-      const recipes = response.data.map((recipe: ApiRecipe) => ({
+      const recipes = exactMatchResponse.data.map((recipe: ApiRecipe) => ({
         id: recipe.recipe_id,
         title: recipe.title,
         image: recipe.image_url,
@@ -69,7 +91,21 @@ const IngredientRecommendationPage = () => {
       }))
       
       setRecipeResults(recipes)
+      
+      // Fetch almost matching recipes with substitution suggestions
+      const almostMatchResponse = await recipesApi.getAlmostMatchingRecipes(
+        ingredientsInput.trim(),
+        2, // Max 2 missing ingredients
+        10 // Limit to 10 results
+      )
+      
+      setAlmostMatchingRecipes(almostMatchResponse.data)
+      
+      // Show results
       setShowModal(true)
+      
+      // Default to showing exact matches if available, otherwise show almost-matching
+      setActiveTab(recipes.length > 0 ? 'exact' : 'almost')
     } catch (error) {
       console.error("Error searching recipes by ingredients:", error)
     } finally {
@@ -86,25 +122,127 @@ const IngredientRecommendationPage = () => {
   const renderRecipeModal = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-        <div ref={modalRef} className="bg-white rounded-3xl w-full max-w-xl px-6 py-8 shadow-xl">
-          <h2 className="text-xl font-medium text-center mb-8 text-gray-500">Possible Recipes With Your Current Ingredients</h2>
+        <div ref={modalRef} className="bg-white rounded-3xl w-full max-w-2xl px-6 py-8 shadow-xl">
+          <h2 className="text-xl font-medium text-center mb-6 text-gray-700">Possible Recipes With Your Ingredients</h2>
           
-          {recipeResults.length === 0 ? (
-            <p className="text-center py-6 text-gray-400">No recipes found with these ingredients.</p>
-          ) : (
-            <div className="space-y-4 max-h-[450px] overflow-y-auto px-4">
-              {recipeResults.map(recipe => (
-                <div 
-                  key={recipe.id}
-                  onClick={() => handleRecipeClick(recipe.id)}
-                  className="bg-red-500 text-white rounded-2xl py-4 px-5 flex justify-between items-center cursor-pointer hover:bg-red-600 transition-colors shadow-md"
-                >
-                  <span className="text-base font-medium">{recipe.title}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              ))}
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              className={`flex-1 py-2 px-4 text-center ${activeTab === 'exact' ? 'border-b-2 border-red-500 text-red-500 font-medium' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('exact')}
+            >
+              Exact Matches {recipeResults.length > 0 && `(${recipeResults.length})`}
+            </button>
+            <button
+              className={`flex-1 py-2 px-4 text-center ${activeTab === 'almost' ? 'border-b-2 border-red-500 text-red-500 font-medium' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('almost')}
+            >
+              Almost Matches {almostMatchingRecipes.length > 0 && `(${almostMatchingRecipes.length})`}
+            </button>
+          </div>
+          
+          {/* Exact Matches Tab */}
+          {activeTab === 'exact' && (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto px-2">
+              {recipeResults.length === 0 ? (
+                <p className="text-center py-6 text-gray-400">No exact matches found. Check "Almost Matches" tab for recipes you can make with just a few more ingredients.</p>
+              ) : (
+                recipeResults.map(recipe => (
+                  <div 
+                    key={recipe.id}
+                    onClick={() => handleRecipeClick(recipe.id)}
+                    className="bg-red-500 text-white rounded-2xl py-4 px-5 flex justify-between items-center cursor-pointer hover:bg-red-600 transition-colors shadow-md"
+                  >
+                    <span className="text-base font-medium">{recipe.title}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          
+          {/* Almost Matching Tab */}
+          {activeTab === 'almost' && (
+            <div className="space-y-6 max-h-[400px] overflow-y-auto px-2">
+              {almostMatchingRecipes.length === 0 ? (
+                <p className="text-center py-6 text-gray-400">No almost-matching recipes found with your ingredients.</p>
+              ) : (
+                almostMatchingRecipes.map(item => (
+                  <div key={item.recipe.recipe_id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                    <div 
+                      onClick={() => handleRecipeClick(item.recipe.recipe_id)}
+                      className="bg-red-500 text-white py-3 px-4 flex justify-between items-center cursor-pointer hover:bg-red-600 transition-colors"
+                    >
+                      <span className="text-base font-medium">{item.recipe.title}</span>
+                      <div className="flex items-center">
+                        <span className="bg-white text-red-500 text-xs font-bold rounded-full px-2 py-1 mr-2">
+                          Missing {item.missing_count}
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    {/* Missing ingredients section */}
+                    <div className="p-4">
+                      <h3 className="text-sm font-semibold text-gray-500 mb-2">Missing Ingredients:</h3>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {item.missing_ingredients.map(ingredient => (
+                          <span key={ingredient} className="bg-red-100 text-red-600 text-xs font-medium px-2 py-1 rounded-full">
+                            {ingredient}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* Substitution suggestions */}
+                      {item.substitutions.length > 0 && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => toggleSubstitution(item.recipe.recipe_id)}
+                            className="text-sm text-blue-500 flex items-center"
+                          >
+                            <span>{expandedSubstitutions[item.recipe.recipe_id] ? 'Hide' : 'Show'} substitution ideas</span>
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              className={`h-4 w-4 ml-1 transform transition-transform ${expandedSubstitutions[item.recipe.recipe_id] ? 'rotate-180' : ''}`} 
+                              viewBox="0 0 20 20" 
+                              fill="currentColor"
+                            >
+                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          
+                          {expandedSubstitutions[item.recipe.recipe_id] && (
+                            <div className="mt-2 pl-2 border-l-2 border-blue-200">
+                              {item.substitutions.map(sub => (
+                                <div key={sub.ingredient} className="mb-2">
+                                  <span className="text-xs font-medium text-gray-600">
+                                    Instead of <span className="text-red-500">{sub.ingredient}</span>, try:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {sub.substitutes.length > 0 ? (
+                                      sub.substitutes.map(substitute => (
+                                        <span key={substitute} className="bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded">
+                                          {substitute}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-xs text-gray-500">No substitutions found</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
           
@@ -133,7 +271,7 @@ const IngredientRecommendationPage = () => {
       
       <div className="flex-grow flex flex-col items-center justify-center p-4">
         <div className="bg-white rounded-3xl w-full max-w-xl p-6 shadow-lg">
-          <h2 className="text-xl font-medium text-center mb-6 text-gray-500">Possible Recipes With Your Current Ingredients</h2>
+          <h2 className="text-xl font-medium text-center mb-6 text-gray-500">Find Recipes With Your Ingredients</h2>
           
           <form onSubmit={handleSearchSubmit} className="space-y-4">
             <div className="bg-red-200 bg-opacity-50 rounded-full p-4">
@@ -158,7 +296,8 @@ const IngredientRecommendationPage = () => {
           </form>
           
           <div className="mt-4 text-gray-500 text-center text-sm">
-            Enter ingredients separated by commas (e.g., "chicken, rice, garlic")
+            <p>Enter ingredients separated by commas (e.g., "chicken, rice, garlic")</p>
+            <p className="mt-2 text-green-600">We'll also suggest recipes you can make with alternatives!</p>
           </div>
         </div>
       </div>

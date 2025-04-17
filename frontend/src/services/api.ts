@@ -112,13 +112,27 @@ export const recipes = {
   },
   
   searchByIngredients: async (ingredients: string) => {
-    const cacheKey = `recipes:ingredients:${ingredients}`;
+    const cacheKey = `recipes:search:ingredients:${ingredients}`;
     const cached = cacheService.get(cacheKey);
     
     if (cached) return { data: cached };
     
     const response = await api.get(`/recipes/api/search/?ingredients=${encodeURIComponent(ingredients)}`);
-    cacheService.set(cacheKey, response.data);
+    cacheService.set(cacheKey, response.data, 300); // 5 minute cache
+    return response;
+  },
+  
+  getAlmostMatchingRecipes: async (ingredients: string, maxMissing = 2, limit = 10) => {
+    const cacheKey = `recipes:almost-matching:${ingredients}:${maxMissing}:${limit}`;
+    const cached = cacheService.get(cacheKey);
+    
+    if (cached) return { data: cached };
+    
+    const response = await api.get(
+      `/recommendations/api/almost-matching/?ingredients=${encodeURIComponent(ingredients)}` +
+      `&max_missing=${maxMissing}&limit=${limit}`
+    );
+    cacheService.set(cacheKey, response.data, 300); // 5 minute cache
     return response;
   },
   

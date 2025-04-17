@@ -194,3 +194,166 @@ def search_by_ingredients(ingredient_query, limit=20, user=None):
             recipes = recipes.filter(recipe_id__in=filtered_recipes)
     
     return recipes[:limit]
+
+def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user=None):
+    """
+    Find recipes that almost match the provided ingredients (missing just a few)
+    
+    Args:
+        ingredient_query (str): Comma-separated list of ingredients available
+        limit (int): Maximum number of results to return
+        max_missing (int): Maximum number of missing ingredients allowed
+        user: Optional user object to filter by their dietary preferences
+        
+    Returns:
+        List of dicts with recipe objects and missing ingredients
+    """
+    # Split and clean the ingredient query
+    if not ingredient_query or ingredient_query.strip() == '':
+        return []
+    
+    user_ingredients = [i.strip().lower() for i in ingredient_query.split(',')]
+    
+    # Cache key for this query
+    cache_key = f'almost_matching_recipes:{",".join(sorted(user_ingredients))}:{max_missing}'
+    if user and user.is_authenticated:
+        cache_key += f':{user.id}'
+    
+    # Check cache first
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+    
+    # Get all recipes
+    all_recipes = Recipe.objects.prefetch_related('recipe_ingredients__ingredient')
+    
+    # Filter by user dietary preferences if applicable
+    if user and user.is_authenticated:
+        from recommendations.models import DietaryPreference
+        preferences = list(DietaryPreference.objects.filter(
+            user=user
+        ).values_list('restriction_type', flat=True))
+        
+        if preferences:
+            filtered_recipes = []
+            for recipe in all_recipes:
+                if all(pref in recipe.dietary_tags for pref in preferences):
+                    filtered_recipes.append(recipe.recipe_id)
+            
+            all_recipes = all_recipes.filter(recipe_id__in=filtered_recipes)
+    
+    almost_matching = []
+    
+    # Analyze each recipe to find those missing just a few ingredients
+    for recipe in all_recipes:
+        recipe_ingredients = [ri.ingredient.name.lower() for ri in recipe.recipe_ingredients.all()]
+        
+        # Find missing ingredients
+        missing_ingredients = []
+        
+        for recipe_ingredient in recipe_ingredients:
+            # Check if this ingredient or a similar form is in user's ingredients
+            found = False
+            
+            # Direct match check
+            for user_ingredient in user_ingredients:
+                if user_ingredient in recipe_ingredient or recipe_ingredient in user_ingredient:
+                    found = True
+                    break
+            
+            # Check for singular/plural forms if no direct match
+            if not found:
+                for user_ingredient in user_ingredients:
+                    # Check singular form
+                    singular = user_ingredient[:-1] if user_ingredient.endswith('s') else user_ingredient
+                    if singular in recipe_ingredient:
+                        found = True
+                        break
+                    
+                    # Check plural form
+                    plural = user_ingredient if user_ingredient.endswith('s') else user_ingredient + 's'
+                    if plural in recipe_ingredient:
+                        found = True
+                        break
+            
+            if not found:
+                missing_ingredients.append(recipe_ingredient)
+        
+        # If the number of missing ingredients is within our threshold
+        if 0 < len(missing_ingredients) <= max_missing:
+            almost_matching.append({
+                'recipe': recipe,
+                'missing_ingredients': missing_ingredients,
+                'missing_count': len(missing_ingredients)
+            })
+    
+    # Sort by number of missing ingredients (ascending)
+    almost_matching.sort(key=lambda x: x['missing_count'])
+    
+    # Limit to requested number
+    result = almost_matching[:limit]
+    
+    # Cache the result
+    cache.set(cache_key, result, 60 * 15)  # Cache for 15 minutes
+    
+    return result
+
+def suggest_ingredient_substitutions(ingredient_name):
+    """
+    Suggest possible substitutions for a given ingredient
+    
+    Args:
+        ingredient_name (str): Name of the ingredient to find substitutes for
+        
+    Returns:
+        List of potential substitute ingredients
+    """
+    # Common substitution pairs (can be expanded)
+    substitution_map = {
+        'butter': ['margarine', 'olive oil', 'coconut oil'],
+        'milk': ['almond milk', 'soy milk', 'oat milk', 'coconut milk'],
+        'cream': ['coconut cream', 'evaporated milk', 'greek yogurt'],
+        'eggs': ['applesauce', 'mashed banana', 'flaxseed mixed with water'],
+        'flour': ['almond flour', 'coconut flour', 'rice flour', 'oat flour'],
+        'sugar': ['honey', 'maple syrup', 'stevia', 'agave nectar'],
+        'rice': ['quinoa', 'cauliflower rice', 'bulgur wheat'],
+        'pasta': ['zucchini noodles', 'spaghetti squash', 'rice noodles'],
+        'beef': ['portobello mushrooms', 'lentils', 'seitan', 'plant-based beef'],
+        'chicken': ['tofu', 'tempeh', 'chickpeas', 'jackfruit'],
+        'fish': ['tofu', 'tempeh', 'heart of palm'],
+        'cheese': ['nutritional yeast', 'vegan cheese', 'cashew cheese'],
+        'soy sauce': ['tamari', 'coconut aminos', 'liquid aminos'],
+        'vinegar': ['lemon juice', 'lime juice'],
+        'wine': ['grape juice', 'broth'],
+        'breadcrumbs': ['crushed crackers', 'rolled oats', 'almond meal'],
+        'mayonnaise': ['greek yogurt', 'mashed avocado', 'hummus'],
+        'onion': ['shallots', 'leeks', 'green onions', 'onion powder'],
+        'garlic': ['shallots', 'garlic powder', 'chives'],
+        'tomatoes': ['red bell peppers', 'pumpkin', 'carrots'],
+    }
+    
+    # Convert to lowercase for comparison
+    ingredient_name = ingredient_name.lower()
+    
+    # Look for direct matches
+    for key, substitutes in substitution_map.items():
+        if key in ingredient_name or ingredient_name in key:
+            return substitutes
+    
+    # Check for singular/plural forms
+    singular = ingredient_name[:-1] if ingredient_name.endswith('s') else ingredient_name
+    plural = ingredient_name if ingredient_name.endswith('s') else ingredient_name + 's'
+    
+    for key, substitutes in substitution_map.items():
+        if key == singular or key == plural:
+            return substitutes
+    
+    # No direct match found, find related ingredient types
+    # This could be expanded with more sophisticated NLP techniques
+    for key, substitutes in substitution_map.items():
+        if (len(key) >= 3 and key[:3] == ingredient_name[:3]) or \
+           (len(ingredient_name) >= 3 and ingredient_name[:3] == key[:3]):
+            return substitutes
+    
+    # Return a generic "not found" response
+    return []

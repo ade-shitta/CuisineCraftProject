@@ -103,3 +103,65 @@ class RecommendedRecipesView(APIView):
         cache.set(cache_key, serialized_data, API_CACHE_TTL)
         
         return Response(serialized_data)
+
+
+class AlmostMatchingRecipesView(APIView):
+    """Get recipes that almost match available ingredients, with substitution suggestions"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Get the ingredients query and other parameters
+        ingredients = request.GET.get('ingredients', '')
+        max_missing = int(request.GET.get('max_missing', 2))
+        limit = int(request.GET.get('limit', 10))
+        
+        # Check cache for this specific query
+        cache_key = f'api:almost_matching:{request.user.id}:{ingredients}:{max_missing}:{limit}'
+        cached_data = cache.get(cache_key)
+        
+        if cached_data is not None:
+            return Response(cached_data)
+        
+        # Find almost matching recipes
+        from recommendations.text_utils import find_almost_matching_recipes, suggest_ingredient_substitutions
+        
+        almost_matching = find_almost_matching_recipes(
+            ingredients,
+            limit=limit,
+            max_missing=max_missing,
+            user=request.user
+        )
+        
+        # Format the response
+        results = []
+        for item in almost_matching:
+            recipe = item['recipe']
+            missing = item['missing_ingredients']
+            
+            # Get substitutions for each missing ingredient
+            substitutions = []
+            for ingredient in missing:
+                subs = suggest_ingredient_substitutions(ingredient)
+                if subs:
+                    substitutions.append({
+                        'ingredient': ingredient,
+                        'substitutes': subs
+                    })
+                else:
+                    substitutions.append({
+                        'ingredient': ingredient,
+                        'substitutes': []
+                    })
+            
+            # Create response object
+            results.append({
+                'recipe': RecipeSerializer(recipe, context={'request': request}).data,
+                'missing_ingredients': missing,
+                'substitutions': substitutions,
+                'missing_count': len(missing)
+            })
+        
+        # Cache the results
+        cache.set(cache_key, results, API_CACHE_TTL)
+        
+        return Response(results)
