@@ -87,6 +87,19 @@ const HomePage = () => {
     fetchFavorites();
   }, [isAuthenticated, navigate, location.key, user?.id])
 
+  useEffect(() => {
+    // Create a set of favorite recipe IDs for quick lookup
+    const favoriteIds = new Set(favorites.map(recipe => recipe.id));
+    
+    // Update recommended recipes to match favorite status
+    setRecommendedRecipes(prevRecipes => 
+      prevRecipes.map(recipe => ({
+        ...recipe,
+        isFavorite: favoriteIds.has(recipe.id)
+      }))
+    );
+  }, [favorites]);
+
   const handleToggleFavorite = async (id: string) => {
     try {
       await recipes.toggleFavorite(id);
