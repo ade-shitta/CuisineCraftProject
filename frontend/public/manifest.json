@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Cuisine Craft",
+  "name": "Cuisine - Recipe App",
+  "description": "Cuisine is a recipe app that allows users to search for recipes, and save their favorite recipes.",
   "icons": [
     {
       "src": "favicon.ico",
