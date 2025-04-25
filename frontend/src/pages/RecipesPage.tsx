@@ -225,7 +225,7 @@ const RecipesPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-3">No Matching Recipes</h2>
           <p className="mb-4">No recipes match your dietary preferences.</p>
           <button 
-            onClick={() => navigate('/recommendations/preferences')}
+            onClick={() => navigate('/dietary-preferences')}
             className="btn bg-red-500 hover:bg-red-600 text-white border-none hover:scale-105 transition-all duration-300 hover:shadow-lg"
           >
             Update Preferences

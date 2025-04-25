@@ -114,3 +114,14 @@ class UserProfileView(APIView):
         
         print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AuthCheckView(APIView):
+    """Simple endpoint to check if user is authenticated"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        is_authenticated = request.user.is_authenticated
+        return Response({
+            'isAuthenticated': is_authenticated,
+            'username': request.user.username if is_authenticated else None
+        })

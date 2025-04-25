@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
@@ -12,8 +10,20 @@ const ProfilePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  // Determine profile picture source
-  const profilePicture = user?.profilePicture || "/images/profile-pic.png"
+  // Generate initials from the user's name
+  const getInitials = () => {
+    if (!user) return 'U';
+    
+    const firstInitial = user.firstName ? user.firstName.charAt(0).toUpperCase() : '';
+    const lastInitial = user.lastName ? user.lastName.charAt(0).toUpperCase() : '';
+    
+    return firstInitial + lastInitial || 'U';
+  };
+
+  // Use ui-avatars service with the user's actual initials
+  const profilePicture = user?.profilePicture 
+    ? user.profilePicture 
+    : `https://ui-avatars.com/api/?name=${getInitials()}&background=FF7070&color=fff&size=256`;
 
   // Log for debugging
   useEffect(() => {
@@ -36,7 +46,7 @@ const ProfilePage = () => {
 
   const handleImageError = () => {
     console.error("Error loading profile image:", profilePicture);
-    setImageError(true);
+    // Don't set imageError - we'll use the original URL
   }
 
   return (
@@ -56,7 +66,7 @@ const ProfilePage = () => {
         <div className="avatar mb-4">
           <div className="w-24 rounded-full ring ring-white">
             <img 
-              src={imageError ? "/images/profile-pic.png" : profilePicture} 
+              src={profilePicture} 
               alt="Profile" 
               onError={handleImageError}
             />

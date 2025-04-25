@@ -52,6 +52,15 @@ export const auth = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  checkIsAuthenticated: async () => {
+    try {
+      const response = await api.get('/api/authenticated/');
+      return response.data.isAuthenticated;
+    } catch (error) {
+      console.error("Failed to check authentication status:", error);
+      return false;
+    }
+  },
 };
 
 // Recipes API with caching
@@ -188,11 +197,23 @@ export const recommendations = {
   },
   // New method to prefetch recommendations when app loads
   prefetchRecommendations: async (limit = 12) => {
-    const cacheKey = `recommendations:recommended:${limit}`;
-    return cacheService.prefetch(
-      cacheKey,
-      () => api.get(`/recommendations/api/recommended/?limit=${limit}`)
-    );
+    try {
+      // Check if user is authenticated first
+      const isAuthenticated = await auth.checkIsAuthenticated();
+      if (!isAuthenticated) {
+        console.log("Skipping recommendations prefetch for unauthenticated user");
+        return;
+      }
+      
+      // Continue with prefetch for authenticated users
+      const cacheKey = `recommendations:recommended:${limit}`;
+      await cacheService.prefetch(
+        cacheKey,
+        () => api.get(`/recommendations/api/recommended/?limit=${limit}`)
+      );
+    } catch (error) {
+      console.warn("Failed to prefetch recommendations:", error);
+    }
   }
 };
 

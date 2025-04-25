@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import api
+from .api import AuthCheckView 
 
 urlpatterns = [
     # Regular Django views
@@ -17,4 +18,5 @@ urlpatterns = [
     path('api/login/', api.UserLoginView.as_view(), name='api-login'),
     path('api/logout/', api.UserLogoutView.as_view(), name='api-logout'),
     path('api/profile/', api.UserProfileView.as_view(), name='api-profile'),
+    path('api/authenticated/', AuthCheckView.as_view(), name='auth_check'),
 ]

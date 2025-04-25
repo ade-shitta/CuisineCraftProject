@@ -59,24 +59,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // First ensure we have a valid CSRF token
         await fetchCSRFToken();
         
-        // Then check if the user is authenticated
-        const response = await auth.getProfile();
+        // Check if the user is authenticated with a conditional check
+        const isAuth = await auth.checkIsAuthenticated();
         
-        // Transform snake_case from Django to camelCase for React
-        setUserAndStorage({
-          id: response.data.id,
-          username: response.data.username,
-          firstName: response.data.firstName, // Using camelCase from API
-          lastName: response.data.lastName,   // Using camelCase from API
-          email: response.data.email,
-          dateOfBirth: response.data.dateOfBirth,
-          profilePicture: response.data.profileImage, // Match the name in the serializer
-        });
+        // Only make the profile request if user is authenticated
+        if (isAuth) {
+          const response = await auth.getProfile();
+          
+          setUserAndStorage({
+            id: response.data.id,
+            username: response.data.username,
+            firstName: response.data.firstName,
+            lastName: response.data.lastName,
+            email: response.data.email,
+            dateOfBirth: response.data.dateOfBirth,
+            profilePicture: response.data.profileImage,
+          });
+        } else {
+          setUserAndStorage(null);
+        }
       } catch (error) {
-        console.log("User not authenticated");
+        // Handle silently - user is not authenticated
         setUserAndStorage(null);
       } finally {
-        setIsLoading(false); // Always set loading to false when done
+        setIsLoading(false);
       }
     };
 
