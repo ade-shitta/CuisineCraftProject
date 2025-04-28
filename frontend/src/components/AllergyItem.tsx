@@ -1,5 +1,3 @@
-
-
 import React from "react"
 
 interface AllergyItemProps {
@@ -25,12 +23,24 @@ const AllergyItem = ({
       onClick={() => onToggle(name)}
     >
       <div className="relative mb-1">
-        <img 
-          src={image || "/placeholder.svg"} 
-          alt={name} 
-          className="w-16 h-16 rounded-lg object-cover"
-          onError={onError} 
-        />
+        <>
+          <img 
+            src={image || ""}
+            alt={name} 
+            className="w-16 h-16 rounded-lg object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              if (onError) onError(e);
+            }} 
+          />
+          {(image === '' || !image) && (
+            <div className="w-16 h-16 rounded-lg bg-white flex items-center justify-center">
+              <div className="text-2xl text-red-400 font-bold">
+                {name.substring(0, 1).toUpperCase()}
+              </div>
+            </div>
+          )}
+        </>
         {isSelected && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
             <svg

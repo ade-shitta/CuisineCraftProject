@@ -1,11 +1,10 @@
-
-
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import Header from "../components/Header"
 import { recommendations } from "../services/api"
 import AllergyItem from "../components/AllergyItem"
+import dietaryIcons from '../components/DietaryIcons'
 
 interface DietaryPreference {
   id: string;
@@ -124,7 +123,7 @@ const DietaryPrefsPage = () => {
                   <AllergyItem
                     key={preference.id}
                     name={preference.name}
-                    image={`/images/dietary/${preference.id}.png`}
+                    image={dietaryIcons[preference.id] || ''}
                     isSelected={preference.isSelected}
                     onToggle={() => togglePreference(preference.id)}
                     onError={handleImageError}

@@ -10,7 +10,7 @@ export const getCSRFToken = (): string => {
 
 export const fetchCSRFToken = async (): Promise<string> => {
   try {
-    await axios.get('http://localhost:8000/api/csrf/', { withCredentials: true });
+    await axios.get('/api/users/csrf/', { withCredentials: true });
     return getCSRFToken();
   } catch (error) {
     console.error('Error fetching CSRF token', error);

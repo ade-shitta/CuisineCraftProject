@@ -15,17 +15,23 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import ReactAppView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('users.urls')),
-    path('recipes/', include('recipes.urls')),
-    path('recommendations/', include('recommendations.urls')),
-    path('ingredients/', include('ingredients.urls')),
+    path('api/', include([
+        path('users/', include('users.urls')),
+        path('recipes/', include('recipes.urls')),
+        path('recommendations/', include('recommendations.urls')),
+        path('ingredients/', include('ingredients.urls')),
+    ])),
+    # Use the custom view for serving React
+    re_path(r'^.*$', ReactAppView.as_view(), name='react-app'),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -5,7 +5,7 @@ import { cacheService } from './cache';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: '/api',
   withCredentials: true, // Critical for cookies
   headers: {
     'Content-Type': 'application/json',
@@ -43,18 +43,18 @@ api.interceptors.request.use(async (config) => {
 
 // Auth API
 export const auth = {
-  register: (userData: any) => api.post('/api/register/', userData),
-  login: (username: string, password: string) => api.post('/api/login/', { username, password }),
-  logout: () => api.post('/api/logout/'),
-  getProfile: () => api.get('/api/profile/'),
-  updateProfile: (formData: FormData) => api.post('/api/profile/', formData, {
+  register: (userData: any) => api.post('/users/register/', userData),
+  login: (username: string, password: string) => api.post('/users/login/', { username, password }),
+  logout: () => api.post('/users/logout/'),
+  getProfile: () => api.get('/users/profile/'),
+  updateProfile: (formData: FormData) => api.post('/users/profile/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   }),
   checkIsAuthenticated: async () => {
     try {
-      const response = await api.get('/api/authenticated/');
+      const response = await api.get('/users/authenticated/');
       return response.data.isAuthenticated;
     } catch (error) {
       console.error("Failed to check authentication status:", error);
@@ -63,7 +63,7 @@ export const auth = {
   },
 };
 
-// Recipes API with caching
+// Recipes API
 export const recipes = {
   getAll: async () => {
     const cacheKey = 'recipes:all';
@@ -104,7 +104,6 @@ export const recipes = {
     cacheService.invalidate('recipes:all');
     cacheService.invalidate(`recipes:${id}`);
     cacheService.invalidate('recipes:favorites');
-    // Invalidate recommendations cache as toggling favorites affects recommendations
     cacheService.invalidate(/^recommendations:recommended/);
     return response;
   },
@@ -138,7 +137,7 @@ export const recipes = {
     if (cached) return { data: cached };
     
     const response = await api.get(
-      `/recommendations/api/almost-matching/?ingredients=${encodeURIComponent(ingredients)}` +
+      `/recommendations/almost-matching/?ingredients=${encodeURIComponent(ingredients)}` +
       `&max_missing=${maxMissing}&limit=${limit}`
     );
     cacheService.set(cacheKey, response.data, 300); // 5 minute cache
@@ -146,23 +145,17 @@ export const recipes = {
   },
   
   markRecipeCooked: async (recipeId: string) => {
-    console.log(`Calling API with URL: /recipes/api/${recipeId}/cook/`);
-    try {
-      const response = await api.post(`/recipes/api/${recipeId}/cook/`);
-      return response.data;
-    } catch (error) {
-      console.error(`Full API request URL: ${api.defaults.baseURL}/recipes/api/${recipeId}/cook/`);
-      throw error;
-    }
+    const response = await api.post(`/recipes/api/${recipeId}/cook/`);
+    return response.data;
   },
 };
 
 // Ingredients API
 export const ingredients = {
-  getAll: () => api.get('/ingredients/api/'),
-  getUserIngredients: () => api.get('/ingredients/api/user/'),
-  trackIngredient: (id: string) => api.post(`/ingredients/api/${id}/track/`),
-  untrackIngredient: (id: string) => api.post(`/ingredients/api/${id}/untrack/`),
+  getAll: () => api.get('/ingredients/'),
+  getUserIngredients: () => api.get('/ingredients/user/'),
+  trackIngredient: (id: string) => api.post(`/ingredients/${id}/track/`),
+  untrackIngredient: (id: string) => api.post(`/ingredients/${id}/untrack/`),
 };
 
 // Recommendations API
@@ -170,7 +163,6 @@ export const recommendations = {
   getDietaryPreferences: () => api.get('/recommendations/api/preferences/'),
   updateDietaryPreferences: (preferences: string[]) => {
     const response = api.post('/recommendations/api/preferences/', { preferences });
-    // Clear all recipe caches as dietary preferences affect recipe filtering
     cacheService.invalidate(/^recipes:/);
     cacheService.invalidate(/^recommendations:/);
     return response;
@@ -182,7 +174,6 @@ export const recommendations = {
     if (cached) return { data: cached };
     
     const response = await api.get(`/recommendations/api/recommended/?limit=${limit}`);
-    // Cache for a longer time since we've increased the TTL in the cache service
     cacheService.set(cacheKey, response.data);
     return response;
   },

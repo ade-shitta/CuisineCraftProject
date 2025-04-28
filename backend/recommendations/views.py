@@ -4,6 +4,9 @@ from .models import DietaryPreference, RecipeInteraction
 from .forms import DietaryPreferenceForm
 from .recommendation_engine import get_personalized_recommendations
 from recipes.models import SavedRecipe
+from django.http import JsonResponse
+from django.core import serializers
+import json
 
 @login_required
 def preferences(request):
@@ -37,9 +40,11 @@ def recommended_recipes(request):
     recommended_recipes = get_personalized_recommendations(request.user)
     
     # Get user's favorite recipe IDs for UI
-    favorite_recipe_ids = set(SavedRecipe.objects.filter(user=request.user).values_list('recipe__recipe_id', flat=True))
+    favorite_recipe_ids = list(SavedRecipe.objects.filter(user=request.user).values_list('recipe__recipe_id', flat=True))
     
-    return render(request, 'recommendations/recommended_recipes.html', {
-        'recipes': recommended_recipes,
+    # Return JSON instead of rendering a template
+    data = {
+        'recipes': [{'recipe_id': r.recipe_id, 'title': r.title, 'image_url': r.image_url} for r in recommended_recipes],
         'favorite_recipe_ids': favorite_recipe_ids
-    })
+    }
+    return JsonResponse(data)

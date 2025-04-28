@@ -45,12 +45,17 @@ const HomePage = () => {
     try {
       const recommendedResponse = await recommendations.getRecommended(12);
       
-      setRecommendedRecipes(recommendedResponse.data.map((recipe: ApiRecipe) => ({
-        id: recipe.recipe_id,
-        title: recipe.title,
-        image: recipe.image_url,
-        isFavorite: recipe.isFavorite
-      })));
+      if (Array.isArray(recommendedResponse.data)) {
+        setRecommendedRecipes(recommendedResponse.data.map((recipe: ApiRecipe) => ({
+          id: recipe.recipe_id,
+          title: recipe.title,
+          image: recipe.image_url,
+          isFavorite: recipe.isFavorite
+        })));
+      } else {
+        console.error("Error: Recommendations data is not an array", recommendedResponse);
+        setRecommendedRecipes([]);
+      }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
     } finally {
@@ -104,6 +109,7 @@ const HomePage = () => {
     try {
       await recipes.toggleFavorite(id);
       
+      // Update recipe data state
       setRecipeData(prevRecipes => 
         prevRecipes.map(recipe => 
           recipe.id === id 
@@ -112,6 +118,7 @@ const HomePage = () => {
         )
       );
       
+      // First, toggle the favorite status in recommended recipes immediately
       setRecommendedRecipes(prevRecipes => 
         prevRecipes.map(recipe => 
           recipe.id === id 
@@ -120,6 +127,7 @@ const HomePage = () => {
         )
       );
       
+      // Update the favorites list
       const wasInFavorites = favorites.some(recipe => recipe.id === id);
       if (wasInFavorites) {
         setFavorites(prevFavorites => 
@@ -134,20 +142,6 @@ const HomePage = () => {
           isFavorite: true
         })));
       }
-      
-      setTimeout(async () => {
-        try {
-          const newRecommendations = await recommendations.refreshRecommendations(12);
-          setRecommendedRecipes(newRecommendations.data.map((recipe: ApiRecipe) => ({
-            id: recipe.recipe_id,
-            title: recipe.title,
-            image: recipe.image_url,
-            isFavorite: recipe.isFavorite
-          })));
-        } catch (error) {
-          console.error("Error refreshing recommendations:", error);
-        }
-      }, 500);
     } catch (error) {
       console.error("Error toggling favorite:", error);
     }
