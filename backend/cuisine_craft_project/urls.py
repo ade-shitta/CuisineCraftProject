@@ -28,10 +28,15 @@ urlpatterns = [
         path('recommendations/', include('recommendations.urls')),
         path('ingredients/', include('ingredients.urls')),
     ])),
-    # Use the custom view for serving React
-    re_path(r'^.*$', ReactAppView.as_view(), name='react-app'),
 ]
 
+# Add static/media URLs before the catch-all pattern
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Add the React catch-all route last
+urlpatterns += [
+    # Use the custom view for serving React
+    re_path(r'^.*$', ReactAppView.as_view(), name='react-app'),
+]

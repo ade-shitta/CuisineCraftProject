@@ -131,16 +131,12 @@ export const recipes = {
   },
   
   getAlmostMatchingRecipes: async (ingredients: string, maxMissing = 2, limit = 10) => {
-    const cacheKey = `recipes:almost-matching:${ingredients}:${maxMissing}:${limit}`;
-    const cached = cacheService.get(cacheKey);
-    
-    if (cached) return { data: cached };
-    
+    // Force refresh each time
     const response = await api.get(
-      `/recommendations/almost-matching/?ingredients=${encodeURIComponent(ingredients)}` +
-      `&max_missing=${maxMissing}&limit=${limit}`
+      `/recommendations/api/almost-matching/?ingredients=${encodeURIComponent(ingredients)}` +
+      `&max_missing=${maxMissing}&limit=${limit}&refresh=true`
     );
-    cacheService.set(cacheKey, response.data, 300); // 5 minute cache
+    
     return response;
   },
   

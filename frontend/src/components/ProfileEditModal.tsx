@@ -17,7 +17,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(user?.profilePicture || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(user?.profileImage || null);
   const [isHovering, setIsHovering] = useState(false);
 
   // Reset form when modal opens with latest user data
@@ -27,7 +27,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
       setLastName(user.lastName || '');
       setUsername(user.username || '');
       setEmail(user.email || '');
-      setPreviewUrl(user.profilePicture || null);
+      setPreviewUrl(user.profileImage || null);
       setSelectedFile(null);
       setError('');
     }
@@ -86,7 +86,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           lastName: response.data.lastName,
           email: response.data.email,
           dateOfBirth: response.data.dateOfBirth,
-          profilePicture: response.data.profileImage,
+          profileImage: response.data.profileImage,
         });
         
         onClose();

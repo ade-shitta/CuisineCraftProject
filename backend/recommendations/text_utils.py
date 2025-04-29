@@ -195,7 +195,7 @@ def search_by_ingredients(ingredient_query, limit=20, user=None):
     
     return recipes[:limit]
 
-def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user=None):
+def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user=None, force_refresh=False):
     """
     Find recipes that almost match the provided ingredients (missing just a few)
     
@@ -204,6 +204,7 @@ def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user
         limit (int): Maximum number of results to return
         max_missing (int): Maximum number of missing ingredients allowed
         user: Optional user object to filter by their dietary preferences
+        force_refresh: If True, bypass cache and recalculate results
         
     Returns:
         List of dicts with recipe objects and missing ingredients
@@ -212,17 +213,19 @@ def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user
     if not ingredient_query or ingredient_query.strip() == '':
         return []
     
-    user_ingredients = [i.strip().lower() for i in ingredient_query.split(',')]
+    user_ingredients = [i.strip().lower() for i in ingredient_query.split(',') if i.strip()]
     
-    # Cache key for this query
-    cache_key = f'almost_matching_recipes:{",".join(sorted(user_ingredients))}:{max_missing}'
-    if user and user.is_authenticated:
-        cache_key += f':{user.id}'
-    
-    # Check cache first
-    cached_result = cache.get(cache_key)
-    if cached_result is not None:
-        return cached_result
+    # Skip cache if force_refresh is True
+    if not force_refresh:
+        # Cache key for this query
+        cache_key = f'almost_matching_recipes:{",".join(sorted(user_ingredients))}:{max_missing}'
+        if user and user.is_authenticated:
+            cache_key += f':{user.id}'
+        
+        # Check cache first
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
     
     # Get all recipes
     all_recipes = Recipe.objects.prefetch_related('recipe_ingredients__ingredient')
@@ -242,59 +245,88 @@ def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user
             
             all_recipes = all_recipes.filter(recipe_id__in=filtered_recipes)
     
-    almost_matching = []
+    matched_recipes = []
     
-    # Analyze each recipe to find those missing just a few ingredients
+    # For each recipe, calculate how many of user's ingredients it uses
+    # and how many additional ingredients are needed
     for recipe in all_recipes:
         recipe_ingredients = [ri.ingredient.name.lower() for ri in recipe.recipe_ingredients.all()]
         
-        # Find missing ingredients
+        # Skip recipes with too many ingredients if user only entered a few
+        if len(recipe_ingredients) > len(user_ingredients) * 2:
+            continue
+            
+        # Count the ingredients that match and don't match
+        matching_ingredients = []
         missing_ingredients = []
         
         for recipe_ingredient in recipe_ingredients:
-            # Check if this ingredient or a similar form is in user's ingredients
             found = False
+            matching_user_ingredient = None
             
-            # Direct match check
+            # Check for exact or partial matches with user ingredients
             for user_ingredient in user_ingredients:
+                # Exact match
+                if recipe_ingredient == user_ingredient:
+                    found = True
+                    matching_user_ingredient = user_ingredient
+                    break
+                    
+                # Partial match (ingredient contains user ingredient or vice versa)
                 if user_ingredient in recipe_ingredient or recipe_ingredient in user_ingredient:
                     found = True
+                    matching_user_ingredient = user_ingredient
+                    break
+                    
+                # Handle singular/plural variations
+                singular = user_ingredient[:-1] if user_ingredient.endswith('s') else user_ingredient
+                plural = user_ingredient if user_ingredient.endswith('s') else user_ingredient + 's'
+                
+                if singular in recipe_ingredient or recipe_ingredient in singular:
+                    found = True
+                    matching_user_ingredient = user_ingredient
+                    break
+                    
+                if plural in recipe_ingredient or recipe_ingredient in plural:
+                    found = True
+                    matching_user_ingredient = user_ingredient
                     break
             
-            # Check for singular/plural forms if no direct match
-            if not found:
-                for user_ingredient in user_ingredients:
-                    # Check singular form
-                    singular = user_ingredient[:-1] if user_ingredient.endswith('s') else user_ingredient
-                    if singular in recipe_ingredient:
-                        found = True
-                        break
-                    
-                    # Check plural form
-                    plural = user_ingredient if user_ingredient.endswith('s') else user_ingredient + 's'
-                    if plural in recipe_ingredient:
-                        found = True
-                        break
-            
-            if not found:
+            if found:
+                matching_ingredients.append((recipe_ingredient, matching_user_ingredient))
+            else:
                 missing_ingredients.append(recipe_ingredient)
         
-        # If the number of missing ingredients is within our threshold
-        if 0 < len(missing_ingredients) <= max_missing:
-            almost_matching.append({
+        # Calculate relevance metrics
+        match_ratio = len(matching_ingredients) / len(recipe_ingredients) if recipe_ingredients else 0
+        ingredient_utilization = len(matching_ingredients) / len(user_ingredients) if user_ingredients else 0
+        
+        # Recipe must use at least one of the user's ingredients
+        # And be missing no more than max_missing ingredients
+        if matching_ingredients and len(missing_ingredients) <= max_missing:
+            matched_recipes.append({
                 'recipe': recipe,
                 'missing_ingredients': missing_ingredients,
-                'missing_count': len(missing_ingredients)
+                'matching_ingredients': [match[0] for match in matching_ingredients],
+                'missing_count': len(missing_ingredients),
+                'match_count': len(matching_ingredients),
+                'match_ratio': match_ratio,
+                'ingredient_utilization': ingredient_utilization,
+                # Score recipes higher when they use more of user's ingredients
+                # and have fewer missing ingredients
+                'relevance_score': (match_ratio * 3) + (ingredient_utilization * 2) - (0.1 * len(missing_ingredients))
             })
     
-    # Sort by number of missing ingredients (ascending)
-    almost_matching.sort(key=lambda x: x['missing_count'])
+    # Sort by our composite relevance score (higher is better)
+    matched_recipes.sort(key=lambda x: x['relevance_score'], reverse=True)
     
-    # Limit to requested number
-    result = almost_matching[:limit]
+    # Return top matches up to requested limit
+    result = matched_recipes[:limit]
     
-    # Cache the result
-    cache.set(cache_key, result, 60 * 15)  # Cache for 15 minutes
+    # Cache the result for a short time only
+    if not force_refresh and user and user.is_authenticated:
+        cache_key = f'almost_matching_recipes:{",".join(sorted(user_ingredients))}:{max_missing}:{user.id}'
+        cache.set(cache_key, result, 60 * 5)  # Cache for 5 minutes
     
     return result
 

@@ -115,12 +115,8 @@ class AlmostMatchingRecipesView(APIView):
         max_missing = int(request.GET.get('max_missing', 2))
         limit = int(request.GET.get('limit', 10))
         
-        # Check cache for this specific query
-        cache_key = f'api:almost_matching:{request.user.id}:{ingredients}:{max_missing}:{limit}'
-        cached_data = cache.get(cache_key)
-        
-        if cached_data is not None:
-            return Response(cached_data)
+        # Always force fresh results by skipping cache lookup
+        refresh = request.GET.get('refresh', 'false').lower() == 'true'
         
         # Find almost matching recipes
         from recommendations.text_utils import find_almost_matching_recipes, suggest_ingredient_substitutions
@@ -129,7 +125,8 @@ class AlmostMatchingRecipesView(APIView):
             ingredients,
             limit=limit,
             max_missing=max_missing,
-            user=request.user
+            user=request.user,
+            force_refresh=refresh
         )
         
         # Format the response
@@ -161,7 +158,8 @@ class AlmostMatchingRecipesView(APIView):
                 'missing_count': len(missing)
             })
         
-        # Cache the results
-        cache.set(cache_key, results, API_CACHE_TTL)
+        # Cache the results but with a short TTL
+        cache_key = f'api:almost_matching:{request.user.id}:{ingredients}:{max_missing}:{limit}'
+        cache.set(cache_key, results, 60)  # Cache for only 1 minute
         
         return Response(results)

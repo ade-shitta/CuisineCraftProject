@@ -20,10 +20,13 @@ const ProfilePage = () => {
     return firstInitial + lastInitial || 'U';
   };
 
+  // Default avatar URL with initials
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${getInitials()}&background=FF7070&color=fff&size=256`;
+
   // Use ui-avatars service with the user's actual initials
-  const profilePicture = user?.profilePicture 
-    ? user.profilePicture 
-    : `https://ui-avatars.com/api/?name=${getInitials()}&background=FF7070&color=fff&size=256`;
+  const profilePicture = !imageError && user?.profileImage 
+    ? user.profileImage 
+    : defaultAvatar;
 
   // Log for debugging
   useEffect(() => {
@@ -42,11 +45,13 @@ const ProfilePage = () => {
 
   const closeModal = () => {
     setIsModalOpen(false)
+    // Reset image error when modal is closed to try loading the image again
+    setImageError(false)
   }
 
   const handleImageError = () => {
-    console.error("Error loading profile image:", profilePicture);
-    // Don't set imageError - we'll use the original URL
+    console.error("Error loading profile image:", user?.profileImage);
+    setImageError(true); // Set error state to use the default avatar
   }
 
   return (

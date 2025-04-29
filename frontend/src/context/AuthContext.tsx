@@ -10,7 +10,7 @@ type User = {
   lastName: string;
   email: string;
   dateOfBirth?: string;
-  profilePicture?: string;
+  profileImage?: string;
 };
 
 type AuthContextType = {
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             lastName: response.data.lastName,
             email: response.data.email,
             dateOfBirth: response.data.dateOfBirth,
-            profilePicture: response.data.profileImage,
+            profileImage: response.data.profileImage,
           });
         } else {
           setUserAndStorage(null);
@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastName: response.data.lastName,   
         email: response.data.email,
         dateOfBirth: response.data.dateOfBirth,
-        profilePicture: response.data.profileImage,
+        profileImage: response.data.profileImage,
       });
       
       // Clear any cached recommendations from previous user
