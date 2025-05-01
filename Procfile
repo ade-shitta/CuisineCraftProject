@@ -1,0 +1,1 @@
+web: cd backend && gunicorn cuisine_craft_project.wsgi:application 

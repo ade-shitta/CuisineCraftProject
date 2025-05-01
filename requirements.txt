@@ -1,3 +1,39 @@
+# Django requirements
+Django>=5.1,<5.2
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.0
+
+# Database
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+
+# Static files
+whitenoise>=6.6.0
+
+# Image processing 
+Pillow>=10.1.0
+
+# Python utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Security
+argon2-cffi>=23.1.0
+
+# Env vars management
+python-dotenv>=1.0.0
+
+# Model recommender dependencies
+scikit-learn>=1.3.2
+numpy>=1.26.1
+pandas>=2.1.3
+
+# WSGI server
+gunicorn>=21.2.0
+
+# Cache
+redis>=5.0.1
+
 asgiref==3.8.1
 attrs==25.3.0
 Brotli==1.1.0
@@ -6,17 +42,13 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
-dj-database-url==2.3.0
-Django==5.1.6
 django-appconf==1.1.0
 django-compressor==4.5.1
-django-cors-headers==4.7.0
 djangorestframework==3.15.2
 filelock==3.18.0
 fsspec==2025.3.0
 fuzzywuzzy==0.18.0
 gensim==0.10.1
-gunicorn==23.0.0
 h11==0.14.0
 idna==3.10
 iniconfig==2.1.0
@@ -27,13 +59,10 @@ MarkupSafe==3.0.2
 mpmath==1.3.0
 networkx==3.4.2
 nltk==3.9.1
-numpy==2.2.4
 outcome==1.3.0.post0
 packaging==25.0
-pillow==11.1.0
 pluggy==1.5.0
 psycopg==3.2.6
-psycopg2-binary==2.9.10
 pycparser==2.22
 PySocks==1.7.1
 pytest==7.4.3
@@ -44,14 +73,12 @@ pytest-metadata==3.1.1
 pytest-selenium==4.1.0
 pytest-variables==3.1.0
 python-decouple==3.8
-python-dotenv==1.1.0
 python-Levenshtein==0.27.1
 RapidFuzz==3.12.2
 rcssmin==1.1.2
 regex==2024.11.6
 requests==2.32.3
 rjsmin==1.2.2
-scikit-learn==1.6.1
 scipy==1.15.2
 selenium==4.16.0
 setuptools==77.0.3
@@ -72,5 +99,4 @@ tzdata==2025.1
 urllib3==2.3.0
 webdriver-manager==4.0.1
 websocket-client==1.8.0
-whitenoise==6.9.0
 wsproto==1.2.0
