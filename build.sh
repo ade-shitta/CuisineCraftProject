@@ -5,7 +5,8 @@ set -o errexit
 # Build frontend
 cd frontend
 npm install
-npm run build
+# Set CI=false to prevent treating warnings as errors
+CI=false npm run build
 cd ..
 
 # Build backend
