@@ -1,1 +1,1 @@
-web: cd backend && gunicorn cuisine_craft_project.wsgi:application 
+web: cd backend && gunicorn cuisine_craft_project.wsgi:application --bind 0.0.0.0:$PORT 

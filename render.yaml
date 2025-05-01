@@ -3,7 +3,7 @@ services:
     name: cuisine-craft
     env: python
     buildCommand: "./build.sh"
-    startCommand: "cd backend && gunicorn cuisine_craft_project.wsgi:application"
+    startCommand: "cd backend && gunicorn cuisine_craft_project.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -15,9 +15,15 @@ services:
         value: true
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: PORT
+        value: 10000
+      - key: WEB_CONCURRENCY
+        value: 4
+      - key: DEBUG
+        value: "True"
 
 databases:
   - name: cuisine-craft-db
     databaseName: cuisine_craft
     user: cuisine_craft_user
-    plan: free 
+    plan: free
