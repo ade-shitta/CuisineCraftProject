@@ -18,5 +18,8 @@ pip install -r ../requirements.txt
 python manage.py makemigrations
 python manage.py migrate
 
+# Import recipes data from TheMealDB API
+python import_data.py
+
 # Collect static files
 python manage.py collectstatic --no-input 

@@ -4,6 +4,14 @@ services:
     env: python
     buildCommand: "./build.sh"
     startCommand: "cd backend && gunicorn cuisine_craft_project.wsgi:application --bind 0.0.0.0:$PORT"
+    plan: starter
+    healthCheckPath: /api/recipes/
+    buildFilter:
+      paths:
+        - backend/**
+        - frontend/**
+        - build.sh
+        - requirements.txt
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -21,6 +29,8 @@ services:
         value: 4
       - key: DEBUG
         value: "True"
+      - key: IMPORT_TIMEOUT
+        value: 600
 
 databases:
   - name: cuisine-craft-db
