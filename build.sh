@@ -2,6 +2,10 @@
 # exit on error
 set -o errexit
 
+# Create media directory on persistent disk if it doesn't exist
+mkdir -p /opt/render/project/src/backend/media
+echo "Created media directory"
+
 # Build frontend
 cd frontend
 npm install

@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'cuisine_craft_project.middleware.MediaFilesMiddleware',  # Add custom middleware for media files
 ]
 
 ROOT_URLCONF = 'cuisine_craft_project.urls'
@@ -145,7 +146,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (User uploaded files)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Use the env var if provided (for persistent disk on Render)
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 # React app build folder
 REACT_APP_DIR = os.path.join(BASE_DIR, '..', 'frontend', 'build')

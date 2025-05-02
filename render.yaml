@@ -12,6 +12,10 @@ services:
         - frontend/**
         - build.sh
         - requirements.txt
+    disk:
+      name: media
+      mountPath: /opt/render/project/src/backend/media
+      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -31,6 +35,8 @@ services:
         value: "True"
       - key: IMPORT_TIMEOUT
         value: 600
+      - key: MEDIA_ROOT
+        value: /opt/render/project/src/backend/media
 
 databases:
   - name: cuisine-craft-db
