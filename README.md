@@ -19,7 +19,7 @@ CuisineCraft is a modern, full-stack recipe application designed to help food en
 ## Tech Stack
 
 ### Frontend
-- React 19 with TypeScript
+- React 18 with TypeScript
 - React Router for navigation
 - Context API for state management
 - Tailwind CSS for styling
