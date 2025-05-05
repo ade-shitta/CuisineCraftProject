@@ -138,8 +138,7 @@ class Command(BaseCommand):
     
     def _process_ingredients(self, recipe, meal_data):
         """
-        Extract ingredients and measurements from meal data 
-        and link them to the recipe
+        Process ingredients and measurements from meal data
         """
         # Remove existing ingredients if updating
         if self.force_update:

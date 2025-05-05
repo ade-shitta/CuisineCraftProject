@@ -37,33 +37,57 @@ CuisineCraft is a modern, full-stack recipe application designed to help food en
 - npm or yarn
 - pip
 
-### Frontend Setup
+### Integrated Development Setup
+The React frontend is built and served through the Django backend, allowing for a seamless development experience.
+
 ```bash
-# Navigate to frontend directory
-cd frontend
+# Clone the repository
+git clone https://github.com/yourusername/cuisine-craft.git
+cd cuisine-craft
 
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-```
-
-### Backend Setup
-```bash
 # Create and activate a virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install backend dependencies
 pip install -r requirements.txt
 
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
+
+# Build the frontend (in development mode)
+cd frontend
+npm run build
+cd ..
+
 # Run migrations
+cd backend
 python manage.py migrate
 
-# Start development server
+# Start the Django server
 python manage.py runserver
 ```
+
+You can now access the application at http://localhost:8000
+
+### Development Workflow
+For active frontend development, you can either:
+
+1. **Rebuild and refresh**: After making changes to React files:
+   ```
+   cd frontend
+   npm run build
+   ```
+   Then refresh your browser.
+
+2. **Stand-alone frontend** (for rapid development):
+   ```
+   cd frontend
+   npm start
+   ```
+   This runs the React app standalone on http://localhost:3000, with API requests proxied to the Django server (which needs to be running). Note: Some backend-integrated features may require using the full integrated setup.
 
 ## Project Structure
 
@@ -77,11 +101,15 @@ CuisineCraftProject/
 │       ├── pages/            # Page components
 │       ├── services/         # API service connectors
 │       └── ...
-└── backend/                  # Django backend application
-    ├── api/                  # REST API endpoints
-    ├── recipes/              # Recipe models and logic
-    ├── users/                # User authentication and profiles
-    └── ...
+├── backend/                  # Django backend application
+│   ├── cuisine_craft_project/# Django project core
+│   ├── recipes/              # Recipe models and logic
+│   ├── users/                # User authentication and profiles
+│   ├── recommendations/      # Recipe recommendation system
+│   ├── ingredients/          # Ingredient management
+│   └── ...
+├── requirements.txt          # Python dependencies
+└── build.sh                  # Build script for deployment
 ```
 
 ## Usage

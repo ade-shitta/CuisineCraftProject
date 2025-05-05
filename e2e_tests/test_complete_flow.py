@@ -9,16 +9,16 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from base_test import BaseTest
 
 class TestCompleteFlow(BaseTest):
-    """Test a complete user journey through the CuisineCraft application."""
+    """Tests the complete user journey through the app."""
     
     def generate_unique_email(self):
-        """Generate a unique email address for testing."""
+        """Creates a random email for testing."""
         timestamp = int(time.time())
         random_str = ''.join(random.choices(string.ascii_lowercase, k=5))
         return f"test_{random_str}_{timestamp}@example.com"
         
     def wait_until_url_changes(self, original_url, timeout=10):
-        """Wait until the URL changes from the original URL."""
+        """Waits for URL to change."""
         end_time = time.time() + timeout
         while time.time() < end_time:
             current_url = self.driver.current_url
@@ -28,7 +28,7 @@ class TestCompleteFlow(BaseTest):
         raise TimeoutException(f"URL didn't change from {original_url} within {timeout} seconds")
     
     def test_complete_user_journey(self):
-        """Test a complete user journey through the application."""
+        """Runs through a typical user workflow."""
         # Generate unique user for this test
         email = self.generate_unique_email()
         password = "FlowTest123!"

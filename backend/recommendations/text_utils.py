@@ -51,9 +51,6 @@ def build_recipe_text_corpus():
 def create_recipe_vectors(force_rebuild=False):
     """
     Create TF-IDF vectors for all recipes with caching
-    
-    Args:
-        force_rebuild (bool): If True, rebuild the vectors even if cached
     """
     # Try to get cached values
     if not force_rebuild:
@@ -119,15 +116,7 @@ def rebuild_recommendation_vectors():
 
 def search_by_ingredients(ingredient_query, limit=20, user=None):
     """
-    Search for recipes containing specific ingredients, filtered by user dietary preferences
-    
-    Args:
-        ingredient_query (str): Comma-separated list of ingredients to search for
-        limit (int): Maximum number of results to return
-        user: Optional user object to filter by their dietary preferences
-        
-    Returns:
-        QuerySet of Recipe objects containing the ingredients
+    Search for recipes containing specific ingredients, filtered by dietary preferences
     """
     # Split and clean the ingredient query
     if not ingredient_query or ingredient_query.strip() == '':
@@ -197,17 +186,7 @@ def search_by_ingredients(ingredient_query, limit=20, user=None):
 
 def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user=None, force_refresh=False):
     """
-    Find recipes that almost match the provided ingredients (missing just a few)
-    
-    Args:
-        ingredient_query (str): Comma-separated list of ingredients available
-        limit (int): Maximum number of results to return
-        max_missing (int): Maximum number of missing ingredients allowed
-        user: Optional user object to filter by their dietary preferences
-        force_refresh: If True, bypass cache and recalculate results
-        
-    Returns:
-        List of dicts with recipe objects and missing ingredients
+    Find recipes that almost match the provided ingredients
     """
     # Split and clean the ingredient query
     if not ingredient_query or ingredient_query.strip() == '':
@@ -332,13 +311,7 @@ def find_almost_matching_recipes(ingredient_query, limit=10, max_missing=2, user
 
 def suggest_ingredient_substitutions(ingredient_name):
     """
-    Suggest possible substitutions for a given ingredient
-    
-    Args:
-        ingredient_name (str): Name of the ingredient to find substitutes for
-        
-    Returns:
-        List of potential substitute ingredients
+    Find possible substitutes for an ingredient
     """
     # Define ingredient categories for more flexible substitution
     ingredient_categories = {
