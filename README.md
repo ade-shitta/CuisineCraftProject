@@ -119,7 +119,6 @@ CuisineCraftProject/
 3. Click on any recipe to view detailed information
 4. Add recipes to favorites by clicking the heart icon
 5. Follow cooking instructions by clicking "View Recipe Details"
-6. Track completed recipes through your profile
 
 ## API Endpoints
 
